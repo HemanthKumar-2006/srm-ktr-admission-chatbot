@@ -1,0 +1,243 @@
+[
+    {
+        "id": 1,
+        "question": "What is the fee for B.Tech CSE at SRM KTR?",
+        "expected_intent": "fee_structure",
+        "expected_campus": "ktr",
+        "expected_keywords": [
+            "fee",
+            "B.Tech",
+            "CSE",
+            "tuition"
+        ],
+        "category": "fee_structure"
+    },
+    {
+        "id": 2,
+        "question": "How do I apply for admission to SRM?",
+        "expected_intent": "admission_process",
+        "expected_campus": null,
+        "expected_keywords": [
+            "admission",
+            "apply",
+            "SRMJEEE"
+        ],
+        "category": "admission"
+    },
+    {
+        "id": 3,
+        "question": "Tell me about the hostel facilities at KTR campus",
+        "expected_intent": "hostel_info",
+        "expected_campus": "ktr",
+        "expected_keywords": [
+            "hostel",
+            "room",
+            "mess"
+        ],
+        "category": "hostel"
+    },
+    {
+        "id": 4,
+        "question": "What courses are available in computer science?",
+        "expected_intent": "course_details",
+        "expected_campus": null,
+        "expected_keywords": [
+            "B.Tech",
+            "computer",
+            "science",
+            "program"
+        ],
+        "category": "course_info"
+    },
+    {
+        "id": 5,
+        "question": "What is the eligibility for B.Tech admission?",
+        "expected_intent": "eligibility",
+        "expected_campus": null,
+        "expected_keywords": [
+            "eligibility",
+            "12th",
+            "PCM",
+            "percentage"
+        ],
+        "category": "admission"
+    },
+    {
+        "id": 6,
+        "question": "Does SRM have a placement cell?",
+        "expected_intent": "campus_life",
+        "expected_campus": null,
+        "expected_keywords": [
+            "placement",
+            "companies",
+            "salary"
+        ],
+        "category": "campus_life"
+    },
+    {
+        "id": 7,
+        "question": "What is the last date to apply for SRMJEEE?",
+        "expected_intent": "admission_process",
+        "expected_campus": null,
+        "expected_keywords": [
+            "SRMJEEE",
+            "date",
+            "deadline",
+            "apply"
+        ],
+        "category": "admission"
+    },
+    {
+        "id": 8,
+        "question": "How much does the hostel cost per year?",
+        "expected_intent": "hostel_info",
+        "expected_campus": null,
+        "expected_keywords": [
+            "hostel",
+            "fee",
+            "cost",
+            "year"
+        ],
+        "category": "hostel"
+    },
+    {
+        "id": 9,
+        "question": "Tell me about SRM Ramapuram campus",
+        "expected_intent": "campus_life",
+        "expected_campus": "rmp",
+        "expected_keywords": [
+            "Ramapuram",
+            "campus"
+        ],
+        "category": "campus_life"
+    },
+    {
+        "id": 10,
+        "question": "What is the curriculum for mechanical engineering?",
+        "expected_intent": "course_details",
+        "expected_campus": null,
+        "expected_keywords": [
+            "mechanical",
+            "curriculum",
+            "semester"
+        ],
+        "category": "course_info"
+    },
+    {
+        "id": 11,
+        "question": "Is there a scholarship program at SRM?",
+        "expected_intent": "fee_structure",
+        "expected_campus": null,
+        "expected_keywords": [
+            "scholarship",
+            "merit"
+        ],
+        "category": "fee_structure"
+    },
+    {
+        "id": 12,
+        "question": "What sports facilities does SRM have?",
+        "expected_intent": "campus_life",
+        "expected_campus": null,
+        "expected_keywords": [
+            "sports",
+            "facility",
+            "ground"
+        ],
+        "category": "campus_life"
+    },
+    {
+        "id": 13,
+        "question": "What is the SRMJEEE exam pattern?",
+        "expected_intent": "admission_process",
+        "expected_campus": null,
+        "expected_keywords": [
+            "SRMJEEE",
+            "exam",
+            "pattern",
+            "marks"
+        ],
+        "category": "admission"
+    },
+    {
+        "id": 14,
+        "question": "Does SRM offer MBA programs?",
+        "expected_intent": "course_details",
+        "expected_campus": null,
+        "expected_keywords": [
+            "MBA",
+            "management",
+            "program"
+        ],
+        "category": "course_info"
+    },
+    {
+        "id": 15,
+        "question": "Hi there!",
+        "expected_intent": "general_query",
+        "expected_campus": null,
+        "expected_keywords": [],
+        "category": "small_talk"
+    },
+    {
+        "id": 16,
+        "question": "What is the fee structure for M.Tech?",
+        "expected_intent": "fee_structure",
+        "expected_campus": null,
+        "expected_keywords": [
+            "M.Tech",
+            "fee",
+            "tuition"
+        ],
+        "category": "fee_structure"
+    },
+    {
+        "id": 17,
+        "question": "How is the food in SRM hostel mess?",
+        "expected_intent": "hostel_info",
+        "expected_campus": null,
+        "expected_keywords": [
+            "food",
+            "mess",
+            "hostel"
+        ],
+        "category": "hostel"
+    },
+    {
+        "id": 18,
+        "question": "Can I get admission without SRMJEEE?",
+        "expected_intent": "admission_process",
+        "expected_campus": null,
+        "expected_keywords": [
+            "admission",
+            "without",
+            "SRMJEEE"
+        ],
+        "category": "admission"
+    },
+    {
+        "id": 19,
+        "question": "What are the engineering branches available?",
+        "expected_intent": "course_details",
+        "expected_campus": null,
+        "expected_keywords": [
+            "engineering",
+            "branch",
+            "program"
+        ],
+        "category": "course_info"
+    },
+    {
+        "id": 20,
+        "question": "Where is SRM KTR campus located?",
+        "expected_intent": "campus_life",
+        "expected_campus": "ktr",
+        "expected_keywords": [
+            "KTR",
+            "Kattankulathur",
+            "Chennai",
+            "location"
+        ],
+        "category": "campus_life"
+    }
+]

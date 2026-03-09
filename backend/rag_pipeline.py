@@ -39,8 +39,9 @@ def build_db():
         docs = json.load(f)
 
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=80
+        chunk_size=400,
+        chunk_overlap=50,
+        separators=["\n\n", "\n", ". ", "! ", "? ", " ", ""]
     )
 
     all_chunks = []
@@ -48,37 +49,46 @@ def build_db():
 
     for d in docs:
         content = clean_text(d["content"])
-
-        # skip junk pages
-        if len(content) < 300:
-            continue
-
-        chunks = splitter.split_text(content)
-
-        # Extract enriched metadata fields (with fallbacks for old format)
         source_url = d.get("url", "")
         page_title = d.get("title", "Untitled Page")
         category = d.get("category", "general")
+        campus = d.get("campus", "ktr")
 
-        for chunk in chunks:
-            if len(chunk) < 80:
+        # skip junk pages
+        if len(content) < 200:
+            continue
+
+        raw_chunks = splitter.split_text(content)
+
+        for chunk in raw_chunks:
+            chunk = chunk.strip()
+            if len(chunk) < 60:
                 continue
 
-            all_chunks.append(chunk)
+            # 🔥 CONTEXT PREPENDING: Add title to help retrieval & generation
+            enriched_chunk = f"[Title: {page_title}] {chunk}"
+
+            all_chunks.append(enriched_chunk)
             all_metadata.append({
                 "source": source_url,
                 "title": page_title,
                 "category": category,
+                "campus": campus,
             })
 
     print(f"[INFO] Clean chunks: {len(all_chunks)}")
 
-    # Count category distribution across chunks
+    # Count category and campus distribution across chunks
     cat_counts = {}
+    cam_counts = {}
     for m in all_metadata:
         cat = m["category"]
+        cam = m["campus"]
         cat_counts[cat] = cat_counts.get(cat, 0) + 1
+        cam_counts[cam] = cam_counts.get(cam, 0) + 1
+    
     print(f"[INFO] Chunk categories: {json.dumps(cat_counts, indent=2)}")
+    print(f"[INFO] Chunk campuses: {json.dumps(cam_counts, indent=2)}")
 
     # reset collection
     try:
@@ -114,27 +124,99 @@ def build_db():
 
     print("[SUCCESS] Vector DB built")
 
+# ================= INTENT DETECTION =================
+
+INTENTS = [
+    "fee_structure",
+    "admission_process",
+    "hostel_info",
+    "course_details",
+    "campus_life",
+    "eligibility",
+    "general_query",
+]
+
+def detect_intent_and_entities(query: str) -> dict:
+    """Use a fast LLM call to classify intent and extract entities (Campus, Program)."""
+    system_prompt = f"""
+Analyze the user query for a university admission chatbot.
+Intents: {", ".join(INTENTS)}
+Campuses: ktr, rmp, vdp, ncr, trp, ap
+
+Return ONLY a JSON object:
+{{
+  "intent": "detected_intent",
+  "entities": {{
+    "campus": "detected_campus_or_null",
+    "program": "detected_program_or_null"
+  }},
+  "is_small_talk": true/false
+}}
+"""
+    try:
+        response = requests.post(
+            "http://localhost:11434/api/generate",
+            json={
+                "model": "gemma3", # Using same model but with lower token limit for speed
+                "prompt": f"{system_prompt}\n\nQuery: {query}\n\nJSON:",
+                "stream": False,
+                "options": {"num_predict": 100, "temperature": 0.0}
+            },
+            timeout=10
+        )
+        # Crude JSON extraction
+        res_text = response.json().get("response", "{}")
+        json_match = re.search(r"\{.*\}", res_text, re.DOTALL)
+        if json_match:
+            return json.loads(json_match.group())
+    except Exception:
+        pass
+    
+    return {"intent": "general_query", "entities": {"campus": None, "program": None}, "is_small_talk": False}
+
 # ================= RAG QUERY =================
 def query_rag(question: str) -> str:
     try:
-        # ================= SMALL TALK =================
-        if is_small_talk(question):
+        # ================= UNDERSTANDING =================
+        analysis = detect_intent_and_entities(question)
+        
+        if analysis.get("is_small_talk"):
             return (
                 "Hello! 👋 I'm the SRM KTR Assistant.\n\n"
-                "Ask me about:\n"
-                "• B.Tech fees\n"
-                "• Courses\n"
-                "• Hostel\n"
-                "• Campus life\n"
-                "• Admissions"
+                "I can help you with:\n"
+                "• B.Tech fees & scholarships\n"
+                "• Admission eligibility & process\n"
+                "• Hostel & Campus life\n"
+                "• Courses & Curriculum"
             )
+
+        # ================= METADATA FILTERING =================
+        where_filter = {}
+        if analysis["entities"].get("campus"):
+            where_filter["campus"] = analysis["entities"]["campus"]
+        
+        # Mapping intent to category
+        intent_map = {
+            "fee_structure": "fee_structure",
+            "admission_process": "admission",
+            "hostel_info": "hostel",
+            "course_details": "course_info",
+            "campus_life": "campus_life",
+            "eligibility": "admission",
+        }
+        
+        target_cat = intent_map.get(analysis["intent"])
+        if target_cat:
+            where_filter["category"] = target_cat
 
         # ================= EMBEDDING =================
         emb = model.encode(question).tolist()
 
+        # Query with metadata filter
         results = collection.query(
             query_embeddings=[emb],
             n_results=25,
+            where=where_filter if where_filter else None,
             include=["documents", "metadatas", "distances"]
         )
 
@@ -202,31 +284,32 @@ def query_rag(question: str) -> str:
         )
 
         # ================= PROMPT =================
+        campus_context = f"Campus: {analysis['entities']['campus'].upper()}" if analysis['entities'].get('campus') else "Campus: SRM KTR (General)"
+        program_context = f"Program: {analysis['entities']['program']}" if analysis['entities'].get('program') else ""
+        
         prompt = f"""
-You are SRM KTR official admission assistant.
+You are the SRM University Official Admission Assistant.
+{campus_context}
+{program_context}
 
 STYLE:
-- Professional but friendly
-- Clear structured answer
-- Use bullet points when helpful
-- If greeting → greet briefly
-- If unsure → say information may vary
+- Professional, factual, and helpful
+- Use clear headings and bullet points
+- Be concise but thorough
 
 STRICT RULES:
-- Never mention the word "context"
-- Never hallucinate locations
-- SRM KTR is in Chennai, Tamil Nadu
-- Prefer concise readable answers
-- When stating facts, add the source number in brackets like [1] or [2]
-- Only use information from the sources provided below
+1. ONLY use information from the provided context sources.
+2. If context lacks the answer, say "I don't have that specific information. Please check our website or contact admissions."
+3. Cite sources using [1], [2], etc. next to specific facts.
+4. SRM KTR is the main campus in Chennai.
 
-QUESTION:
-{question}
+INTENT: {analysis['intent']}
+USER QUESTION: {question}
 
-INFORMATION (with source labels):
+CONTEXT SOURCES:
 {context}
 
-AVAILABLE SOURCES:
+SOURCE DETAILS:
 {citation_block}
 
 FINAL ANSWER:
@@ -235,7 +318,7 @@ FINAL ANSWER:
         answer = call_llm(prompt)
 
         # ================= APPEND CITATIONS =================
-        if citation_list and len(filtered) >= 3:
+        if citation_list:
             answer += "\n\n📚 **Sources:**\n"
             for c in citation_list:
                 answer += f"[{c['index']}] [{c['title']}]({c['url']})\n"

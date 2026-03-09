@@ -228,10 +228,51 @@ def extract_tables_text(soup: BeautifulSoup) -> str:
     return " ".join(table_texts)
 
 
+# ================= CAMPUS CLASSIFICATION =================
+
+CAMPUS_RULES = [
+    {"id": "ktr", "names": ["ktr", "kattankulathur", "chennai main"]},
+    {"id": "rmp", "names": ["rmp", "ramapuram"]},
+    {"id": "vdp", "names": ["vdp", "vadapalani"]},
+    {"id": "ncr", "names": ["ncr", "modinagar", "delhi"]},
+    {"id": "trp", "names": ["trp", "tiruchirappalli", "trichy"]},
+    {"id": "ap", "names": ["amaravati", "andhra pradesh"]},
+]
+
+
+def extract_campus(url: str, text: str) -> str:
+    """Identify the specific campus from URL or content."""
+    url_lower = url.lower()
+    text_lower = text.lower()
+
+    # Priority 1: URL path
+    for campus in CAMPUS_RULES:
+        if campus["id"] in url_lower:
+            return campus["id"]
+        for name in campus["names"]:
+            if name in url_lower:
+                return campus["id"]
+
+    # Priority 2: Content mentions (count occurrences)
+    campus_scores = {}
+    for campus in CAMPUS_RULES:
+        score = 0
+        for name in campus["names"]:
+            score += text_lower.count(name)
+        if score > 0:
+            campus_scores[campus["id"]] = score
+
+    if campus_scores:
+        # Return the one with highest mentions
+        return max(campus_scores, key=campus_scores.get)
+
+    return "ktr"  # Default to KTR as per project scope
+
+
 # ================= CLEAN TEXT =================
 
 def extract_page_data(html: str, url: str) -> dict | None:
-    """Extract enriched page data with title, category, tables, and clean content."""
+    """Extract enriched page data with title, category, campus, tables, and clean content."""
     soup = BeautifulSoup(html, "html.parser")
 
     main_content = soup.find("main") or soup.find("article") or soup.body
@@ -266,10 +307,14 @@ def extract_page_data(html: str, url: str) -> dict | None:
     # Classify into a domain category
     category = classify_category(url, text)
 
+    # Extract campus
+    campus = extract_campus(url, text)
+
     return {
         "url": url,
         "title": title,
         "category": category,
+        "campus": campus,
         "content": text,
         "tables": tables_structured,
     }
