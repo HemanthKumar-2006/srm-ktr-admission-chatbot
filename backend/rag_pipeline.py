@@ -349,3 +349,7 @@ def call_llm(prompt: str) -> str:
 
     except Exception as e:
         return f"LLM not running: {e}"
+
+# ================= RUN =================
+if __name__ == "__main__":
+    build_db()
