@@ -191,9 +191,9 @@ def query_rag(question: str) -> str:
             )
 
         # ================= METADATA FILTERING =================
-        where_filter = {}
+        conditions = []
         if analysis["entities"].get("campus"):
-            where_filter["campus"] = analysis["entities"]["campus"]
+            conditions.append({"campus": analysis["entities"]["campus"]})
         
         # Mapping intent to category
         intent_map = {
@@ -207,7 +207,13 @@ def query_rag(question: str) -> str:
         
         target_cat = intent_map.get(analysis["intent"])
         if target_cat:
-            where_filter["category"] = target_cat
+            conditions.append({"category": target_cat})
+            
+        where_filter = None
+        if len(conditions) == 1:
+            where_filter = conditions[0]
+        elif len(conditions) > 1:
+            where_filter = {"$and": conditions}
 
         # ================= EMBEDDING =================
         emb = model.encode(question).tolist()
@@ -216,19 +222,30 @@ def query_rag(question: str) -> str:
         results = collection.query(
             query_embeddings=[emb],
             n_results=25,
-            where=where_filter if where_filter else None,
+            where=where_filter,
             include=["documents", "metadatas", "distances"]
         )
+
+        # Fallback if metadata filter is too strict
+        if not results.get("documents", [[]])[0]:
+            print("⚠️ [RAG] Metadata filter returned 0 results. Falling back to global search.")
+            results = collection.query(
+                query_embeddings=[emb],
+                n_results=25,
+                where=None,
+                include=["documents", "metadatas", "distances"]
+            )
 
         docs = results.get("documents", [[]])[0]
         metas = results.get("metadatas", [[]])[0]
         distances = results.get("distances", [[]])[0]
 
-        # ================= STRONG FILTER =================
+        # ================= DEMANDING FILTER =================
+        # Relaxed from 1.0 to 1.5 to improve recall
         filtered = [
             (d, m, dist)
             for d, m, dist in zip(docs, metas, distances)
-            if dist < 1.0
+            if dist < 1.5
         ]
 
         if not filtered:
@@ -298,10 +315,11 @@ STYLE:
 - Be concise but thorough
 
 STRICT RULES:
-1. ONLY use information from the provided context sources.
-2. If context lacks the answer, say "I don't have that specific information. Please check our website or contact admissions."
+1. ONLY use information from the provided context sources to answer the user's question.
+2. If the provided context does not contain the answer, you MUST reply EXACTLY with: "I don't have that specific information. Please check our website or contact admissions." Do not provide partial answers or guess.
 3. Cite sources using [1], [2], etc. next to specific facts.
 4. SRM KTR is the main campus in Chennai.
+5. NEVER append a list of sources at the bottom of your answer. Just answer the question with inline citations.
 
 INTENT: {analysis['intent']}
 USER QUESTION: {question}
@@ -315,12 +333,15 @@ SOURCE DETAILS:
 FINAL ANSWER:
 """
 
+        with open("debug_prompt.txt", "w", encoding="utf-8") as f:
+            f.write(prompt)
         answer = call_llm(prompt)
 
         # ================= APPEND CITATIONS =================
-        if citation_list:
+        used_citations = [c for c in citation_list if f"[{c['index']}]" in answer]
+        if used_citations:
             answer += "\n\n📚 **Sources:**\n"
-            for c in citation_list:
+            for c in used_citations:
                 answer += f"[{c['index']}] [{c['title']}]({c['url']})\n"
 
         return answer.strip()
