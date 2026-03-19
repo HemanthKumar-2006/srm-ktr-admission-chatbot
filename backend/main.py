@@ -1,67 +1,66 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
+from functools import partial
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.models import ChatRequest, ChatResponse, HealthResponse, Source
-from backend.rag_pipeline import query_rag, detect_intent_and_entities, collection, build_db
+from backend.models import ChatRequest, ChatResponse, HealthResponse
+from backend.rag_pipeline import query_rag, get_collection, build_db
 from backend.cache import cache
 
 # ================= LOGGING =================
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s",
 )
 logger = logging.getLogger("srm_chatbot")
 
-
 # ================= LIFESPAN =================
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🚀 SRM Admission Chatbot starting up...")
-    logger.info(f"📊 Vector DB collection count: {collection.count()}")
+    try:
+        count = get_collection().count()
+        logger.info(f"📊 Vector DB chunks loaded: {count}")
+        if count == 0:
+            logger.warning("⚠️ Vector DB is empty — run build_db first.")
+    except Exception as e:
+        logger.error(f"❌ Could not reach Vector DB: {e}")
     yield
     logger.info("👋 Shutting down...")
 
-
 # ================= APP =================
+
 app = FastAPI(
     title="SRM Admission Chatbot",
-    description="AI-powered admission assistant for SRM Institute of Science and Technology",
     version="2.0",
     lifespan=lifespan,
 )
 
-# ================= CORS =================
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "*",  # keep during development
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
 # ================= ROUTES =================
 
 @app.get("/")
 async def home():
-    return {"message": "SRM Admission Chatbot API v2.0 🚀"}
-
+    return {"message": "SRM Chatbot API 🚀"}
 
 @app.get("/health", response_model=HealthResponse)
 async def health():
     try:
-        db_count = collection.count()
-        db_status = f"ok ({db_count} chunks)"
-    except Exception:
+        count = get_collection().count()
+        db_status = f"ok ({count} chunks)"
+    except:
         db_status = "error"
 
     return HealthResponse(
@@ -70,72 +69,94 @@ async def health():
         vector_db_status=db_status,
     )
 
+# ================= CHAT =================
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
+
     question = req.query.strip()
 
     if not question:
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-    # ================= CACHE CHECK =================
+    # ================= CACHE =================
     cached = cache.get(question)
     if cached:
-        logger.info(f"💾 Cache HIT: {question[:50]}...")
+        logger.info(f"💾 Cache HIT: {question[:50]}")
         return ChatResponse(**cached)
 
     try:
-        # ================= INTENT DETECTION =================
-        analysis = detect_intent_and_entities(question)
-        logger.info(f"🎯 Intent: {analysis.get('intent')} | Entities: {analysis.get('entities')}")
+        logger.info(f"💬 Query: {question}")
 
-        # ================= RAG =================
-        answer = query_rag(question)
+        loop = asyncio.get_event_loop()
+
+        # ✅ IMPORTANT CHANGE HERE
+        result = await loop.run_in_executor(None, partial(query_rag, question))
+
+        # query_rag now returns dict
+        answer = result.get("answer", "")
+        sources_raw = result.get("sources", [])
 
         if not answer:
-            answer = "Sorry, I couldn't find relevant information. Please check the SRM website."
+            answer = "No relevant information found."
 
-        # Build structured response
+        # ✅ FIXED: Proper structured sources
+        seen = set()
+        sources = []
+
+        for src in sources_raw:
+            if src and src not in seen:
+                seen.add(src)
+                sources.append({
+                    "url": src,
+                    "title": src
+                })
+
         response_data = {
             "response": answer,
-            "intent": analysis.get("intent", "general_query"),
-            "sources": [],
-            "campus": analysis.get("entities", {}).get("campus"),
-            "program": analysis.get("entities", {}).get("program"),
+            "intent": "general_query",
+            "sources": sources,
+            "campus": None,
+            "program": None,
         }
 
-        # ================= CACHE STORE =================
         cache.set(question, response_data)
-        logger.info(f"✅ Answered: {question[:50]}...")
 
         return ChatResponse(**response_data)
 
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"❌ Chat error: {e}")
-        raise HTTPException(status_code=500, detail=f"Chat error: {str(e)}")
+        logger.error(f"❌ Chat error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
+# ================= ADMIN =================
 
-@app.get("/cache/stats")
-async def cache_stats():
-    """Returns cache hit/miss statistics."""
-    return cache.stats()
-
-
-@app.post("/cache/clear")
-async def clear_cache():
-    """Flush the query cache (admin endpoint)."""
-    cache.clear()
-    return {"message": "Cache cleared"}
-
+@app.post("/admin/build-db")
+async def build_database():
+    try:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, partial(build_db, False))
+        cache.clear()
+        return {"message": "DB updated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/admin/rebuild-db")
 async def rebuild_database():
-    """Trigger a vector DB rebuild from scraped data (admin endpoint)."""
     try:
-        build_db()
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, partial(build_db, True))
         cache.clear()
-        return {"message": "Vector DB rebuilt and cache cleared"}
+        return {"message": "DB rebuilt"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Rebuild error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ================= CACHE =================
+
+@app.get("/cache/stats")
+async def cache_stats():
+    return cache.stats()
+
+@app.post("/cache/clear")
+async def clear_cache():
+    cache.clear()
+    return {"message": "Cache cleared"}

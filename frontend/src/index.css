@@ -6,55 +6,55 @@
 
 @layer base {
   :root {
-    --background: 260 20% 6%;
-    --foreground: 240 10% 95%;
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
 
-    --card: 260 15% 12%;
-    --card-foreground: 240 10% 95%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
 
-    --popover: 260 15% 12%;
-    --popover-foreground: 240 10% 95%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 262 80% 60%;
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 50% 20%;
-    --secondary-foreground: 240 10% 90%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 260 15% 18%;
-    --muted-foreground: 260 10% 55%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 280 70% 55%;
+    --accent: 188 95% 35%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 260 20% 20%;
-    --input: 260 15% 18%;
-    --ring: 262 80% 60%;
+    --border: 214 32% 91%;
+    --input: 0 0% 100%;
+    --ring: 217 91% 60%;
 
     --radius: 1rem;
 
-    --glass: 260 20% 14%;
-    --glass-border: 260 30% 28%;
-    --glass-glow: 262 80% 60%;
+    --glass: 0 0% 100%;
+    --glass-border: 214 32% 91%;
+    --glass-glow: 217 91% 60%;
 
-    --gradient-start: 262 80% 60%;
-    --gradient-end: 240 70% 55%;
+    --gradient-start: 217 91% 60%;
+    --gradient-end: 188 95% 35%;
 
-    --chat-user: 262 80% 55%;
-    --chat-bot: 260 15% 16%;
-    --chat-bot-foreground: 240 10% 85%;
+    --chat-user: 217 91% 60%;
+    --chat-bot: 0 0% 100%;
+    --chat-bot-foreground: 222 47% 11%;
 
-    --sidebar-background: 260 20% 8%;
-    --sidebar-foreground: 240 5.3% 90%;
-    --sidebar-primary: 262 80% 60%;
+    --sidebar-background: 210 40% 98%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 260 15% 18%;
-    --sidebar-accent-foreground: 240 10% 90%;
-    --sidebar-border: 260 20% 20%;
-    --sidebar-ring: 262 80% 60%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 217 91% 60%;
   }
 }
 
@@ -65,22 +65,28 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', sans-serif;
+    background:
+      radial-gradient(circle at top left, hsl(var(--primary) / 0.08), transparent 30%),
+      radial-gradient(circle at top right, hsl(var(--accent) / 0.06), transparent 28%),
+      linear-gradient(180deg, #ffffff 0%, #f8fbff 48%, #eef6ff 100%);
   }
 }
 
 @layer utilities {
   .glass {
-    background: hsl(var(--glass) / 0.6);
+    background: hsl(var(--glass) / 0.82);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border: 1px solid hsl(var(--glass-border) / 0.3);
+    border: 1px solid hsl(var(--glass-border) / 0.9);
+    box-shadow: 0 18px 48px rgba(148, 163, 184, 0.14);
   }
 
   .glass-strong {
-    background: hsl(var(--glass) / 0.8);
+    background: hsl(var(--glass) / 0.96);
     backdrop-filter: blur(40px);
     -webkit-backdrop-filter: blur(40px);
-    border: 1px solid hsl(var(--glass-border) / 0.4);
+    border: 1px solid hsl(var(--glass-border) / 1);
+    box-shadow: 0 24px 72px rgba(148, 163, 184, 0.18);
   }
 
   .gradient-primary {
@@ -95,12 +101,12 @@
   }
 
   .glow-primary {
-    box-shadow: 0 0 40px hsl(var(--glass-glow) / 0.15),
-                0 0 80px hsl(var(--glass-glow) / 0.05);
+    box-shadow: 0 18px 45px hsl(var(--glass-glow) / 0.12),
+                0 0 0 1px hsl(var(--glass-border) / 0.65);
   }
 
   .glow-sm {
-    box-shadow: 0 0 20px hsl(var(--glass-glow) / 0.1);
+    box-shadow: 0 10px 24px hsl(var(--glass-glow) / 0.15);
   }
 
   .float-animation {

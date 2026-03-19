@@ -1,451 +1,372 @@
-import requests
-from bs4 import BeautifulSoup
+"""
+SRM Advanced Web Scraper
+- Async/concurrent fetching (10x+ faster)
+- Retry with exponential backoff
+- Resumable (skips already-scraped pages)
+- robots.txt compliance
+- Structured logging
+- Progress tracking with ETA
+- Graceful shutdown on Ctrl+C
+"""
+
+import asyncio
+import aiohttp
+import xml.etree.ElementTree as ET
+from urllib.parse import urlparse
 from pathlib import Path
 import json
-import time
-from urllib.parse import urljoin, urlparse
 import re
-import random
-from pypdf import PdfReader
+import csv
+import time
+import hashlib
+import logging
+import signal
+import sys
+from dataclasses import dataclass, field
+from typing import Optional
+from bs4 import BeautifulSoup
+from urllib.robotparser import RobotFileParser
 
 # ================= CONFIG =================
 
-BASE_DOMAIN = "www.srmist.edu.in"
+@dataclass
+class Config:
+    sitemap_index: str = "https://www.srmist.edu.in/sitemap.xml"
+    base_domain: str = "www.srmist.edu.in"
+    base_dir: Path = Path(__file__).resolve().parent
+    data_dir: Path = field(init=False)
 
-SEED_URLS = [
-    "https://www.srmist.edu.in/admission-india/",
-    "https://www.srmist.edu.in/engineering/",
-    "https://www.srmist.edu.in/srm-hostels/",
-    "https://www.srmist.edu.in/life-at-srm/",
-]
+    max_urls: int = 8000
+    concurrency: int = 10          # Parallel requests
+    request_timeout: int = 20
+    min_content_len: int = 200
 
-MAX_PAGES = 300
-CRAWL_DELAY = (1.5, 2.5)
-TIMEOUT = 30
-MAX_RETRIES = 3
+    # Retry
+    max_retries: int = 3
+    retry_base_delay: float = 1.5  # Exponential backoff base (seconds)
 
-PRIORITY_KEYWORDS = [
-    "admission", "fee", "tuition", "btech",
-    "engineering", "hostel", "course",
-    "program", "ktr"
-]
+    # Politeness
+    delay_between_batches: float = 0.3   # Seconds between concurrency batches
+    respect_robots: bool = True
 
-EXCLUDE_KEYWORDS = [
-    "wp-admin", "faculty", "research",
-    "press-media", "staff", "library",
-    "login", "signup"
-]
+    user_agent: str = "Mozilla/5.0 (compatible; SRMScraper/2.0)"
 
-SKIP_EXTENSIONS = (
-    ".jpg", ".jpeg", ".png", ".webp", ".gif",
-    ".svg", ".mp4", ".mp3", ".zip", ".rar",
-    ".doc", ".docx", ".xls", ".xlsx"
+    def __post_init__(self):
+        self.data_dir = self.base_dir / "data" / "srm_docs"
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+
+CFG = Config()
+
+# ================= LOGGING =================
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler(CFG.base_dir / "scraper.log", encoding="utf-8"),
+        logging.StreamHandler(sys.stdout),
+    ],
 )
+log = logging.getLogger("srm_scraper")
 
-# ================= CATEGORY CLASSIFICATION =================
+# ================= PROGRESS TRACKER =================
 
-CATEGORY_RULES = [
-    {
-        "category": "fee_structure",
-        "url_keywords": ["fee", "tuition", "scholarship"],
-        "content_keywords": ["fee", "tuition", "semester", "per annum", "₹", "inr", "scholarship"],
-    },
-    {
-        "category": "admission",
-        "url_keywords": ["admission", "apply", "entrance", "srmjeee", "eligibility"],
-        "content_keywords": ["admission", "eligibility", "entrance", "apply", "srmjeee", "cutoff"],
-    },
-    {
-        "category": "hostel",
-        "url_keywords": ["hostel", "accommodation", "mess"],
-        "content_keywords": ["hostel", "accommodation", "mess", "room", "warden", "boys", "girls"],
-    },
-    {
-        "category": "course_info",
-        "url_keywords": ["program", "course", "btech", "mtech", "mba", "department", "engineering", "curriculum"],
-        "content_keywords": ["curriculum", "syllabus", "semester", "credit", "elective", "program", "degree"],
-    },
-    {
-        "category": "campus_life",
-        "url_keywords": ["campus", "life-at-srm", "placement", "club", "facility"],
-        "content_keywords": ["campus", "placement", "club", "facility", "sports", "library", "lab"],
-    },
-]
+class Progress:
+    def __init__(self, total: int):
+        self.total = total
+        self.done = 0
+        self.saved = 0
+        self.failed = 0
+        self.skipped = 0
+        self.start_time = time.time()
 
+    def update(self, result: str):
+        self.done += 1
+        if result == "saved":
+            self.saved += 1
+        elif result == "failed":
+            self.failed += 1
+        elif result == "skipped":
+            self.skipped += 1
 
-def classify_category(url: str, text: str) -> str:
-    """Classify a page into a domain category based on URL and content keywords."""
-    url_lower = url.lower()
-    text_lower = text.lower()
+    def eta_str(self) -> str:
+        elapsed = time.time() - self.start_time
+        if self.done == 0:
+            return "?"
+        rate = self.done / elapsed
+        remaining = (self.total - self.done) / rate if rate > 0 else 0
+        mins, secs = divmod(int(remaining), 60)
+        return f"{mins}m{secs:02d}s"
 
-    best_category = "general"
-    best_score = 0
+    def log(self):
+        log.info(
+            f"Progress: {self.done}/{self.total} | "
+            f"Saved: {self.saved} | Failed: {self.failed} | "
+            f"Skipped: {self.skipped} | ETA: {self.eta_str()}"
+        )
 
-    for rule in CATEGORY_RULES:
-        score = 0
-        # URL matches are weighted higher (more reliable signal)
-        for kw in rule["url_keywords"]:
-            if kw in url_lower:
-                score += 3
+# ================= ROBOTS.TXT =================
 
-        # Content keyword matches
-        for kw in rule["content_keywords"]:
-            count = text_lower.count(kw)
-            score += min(count, 5)  # cap at 5 to avoid one keyword dominating
+def load_robots(base_url: str, user_agent: str) -> Optional[RobotFileParser]:
+    rp = RobotFileParser()
+    robots_url = f"{base_url}/robots.txt"
+    try:
+        rp.set_url(robots_url)
+        rp.read()
+        log.info(f"Loaded robots.txt from {robots_url}")
+        return rp
+    except Exception as e:
+        log.warning(f"Could not load robots.txt: {e}")
+        return None
 
-        if score > best_score:
-            best_score = score
-            best_category = rule["category"]
+# ================= ASYNC FETCH =================
 
-    # require a minimum confidence threshold
-    if best_score < 3:
-        return "general"
-
-    return best_category
-
-
-# ================= HEADERS =================
-
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/121.0.0.0 Safari/537.36"
-    ),
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Connection": "keep-alive",
-}
-
-session = requests.Session()
-session.headers.update(HEADERS)
-
-# ================= URL FILTER =================
-
-def is_valid_url(url: str) -> bool:
-    parsed = urlparse(url)
-
-    if BASE_DOMAIN not in parsed.netloc:
-        return False
-
-    url_lower = url.lower()
-
-    for word in EXCLUDE_KEYWORDS:
-        if word in url_lower:
-            return False
-
-    if url_lower.endswith(SKIP_EXTENSIONS):
-        return False
-
-    return True
-
-# ================= ROBUST REQUEST =================
-
-def fetch_url(url: str):
-    for attempt in range(MAX_RETRIES):
+async def fetch(session: aiohttp.ClientSession, url: str) -> Optional[str]:
+    """Fetch URL with exponential backoff retries."""
+    for attempt in range(1, CFG.max_retries + 1):
         try:
-            r = session.get(url, timeout=TIMEOUT)
-
-            if r.status_code == 403:
-                time.sleep(3)
-                continue
-
-            r.raise_for_status()
-            return r.text
-
-        except Exception:
-            time.sleep(2 + attempt)
-
-    raise Exception("Failed after retries")
-
-
-# ================= METADATA EXTRACTION =================
-
-def extract_page_title(soup: BeautifulSoup) -> str:
-    """Extract the best available page title."""
-    # Try <h1> first (most specific)
-    h1 = soup.find("h1")
-    if h1:
-        title = h1.get_text(strip=True)
-        if len(title) > 5:
-            return title
-
-    # Fallback to <title> tag
-    title_tag = soup.find("title")
-    if title_tag:
-        title = title_tag.get_text(strip=True)
-        # Strip common suffixes like "| SRM IST" or "- SRMIST"
-        title = re.split(r"\s*[|–—-]\s*SRM", title, maxsplit=1)[0].strip()
-        if len(title) > 3:
-            return title
-
-    return "Untitled Page"
-
-
-def extract_tables_structured(soup: BeautifulSoup) -> list[dict]:
-    """Extract tables as structured data (list of row-dicts) instead of flat text."""
-    structured_tables = []
-
-    for table in soup.find_all("table"):
-        rows = table.find_all("tr")
-        if not rows:
-            continue
-
-        # Try to get headers from the first row
-        header_cells = rows[0].find_all(["th", "td"])
-        headers = [cell.get_text(" ", strip=True) for cell in header_cells]
-
-        table_data = []
-        for row in rows[1:]:
-            cols = [c.get_text(" ", strip=True) for c in row.find_all(["td", "th"])]
-            if cols:
-                # Zip with headers if available, otherwise store as list
-                if headers and len(cols) == len(headers):
-                    table_data.append(dict(zip(headers, cols)))
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=CFG.request_timeout)) as resp:
+                if resp.status == 200:
+                    return await resp.text(errors="replace")
+                elif resp.status in (403, 404, 410):
+                    log.debug(f"[{resp.status}] Skipping {url}")
+                    return None
                 else:
-                    table_data.append({"columns": cols})
+                    log.warning(f"[{resp.status}] Attempt {attempt}/{CFG.max_retries}: {url}")
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            log.warning(f"[ERROR] Attempt {attempt}/{CFG.max_retries} for {url}: {type(e).__name__}")
 
-        if table_data:
-            structured_tables.append({
-                "headers": headers,
-                "rows": table_data,
-            })
+        if attempt < CFG.max_retries:
+            await asyncio.sleep(CFG.retry_base_delay ** attempt)
 
-    return structured_tables
+    log.error(f"[FAILED] Exhausted retries: {url}")
+    return None
+
+# ================= SITEMAP =================
+
+async def get_urls(session: aiohttp.ClientSession) -> list[str]:
+    """Recursively fetch all URLs from sitemap index."""
+    log.info(f"Fetching sitemap index: {CFG.sitemap_index}")
+    xml_text = await fetch(session, CFG.sitemap_index)
+    if not xml_text:
+        log.error("Could not fetch sitemap index.")
+        return []
+
+    ns = {"ns": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+    root = ET.fromstring(xml_text)
+
+    sitemap_links = [loc.text for loc in root.findall(".//ns:loc", ns) if loc.text]
+    log.info(f"Found {len(sitemap_links)} child sitemaps")
+
+    url_tasks = [fetch(session, sm) for sm in sitemap_links]
+    results = await asyncio.gather(*url_tasks)
+
+    urls: set[str] = set()
+    for xml_result in results:
+        if not xml_result:
+            continue
+        try:
+            child_root = ET.fromstring(xml_result)
+            for loc in child_root.findall(".//ns:loc", ns):
+                if loc.text:
+                    urls.add(loc.text.strip())
+        except ET.ParseError as e:
+            log.warning(f"Sitemap parse error: {e}")
+
+    log.info(f"Total URLs discovered: {len(urls)}")
+    return list(urls)
+
+# ================= EXTRACTION =================
+
+def clean_text(soup: BeautifulSoup) -> str:
+    main = soup.find("main") or soup.find("article") or soup.body
+    if not main:
+        return ""
+    for tag in main(["script", "style", "nav", "footer", "header", "aside"]):
+        tag.decompose()
+    return re.sub(r"\s+", " ", main.get_text(" ", strip=True)).strip()
 
 
-def extract_tables_text(soup: BeautifulSoup) -> str:
-    """Extract tables as pipe-separated text for embedding (backwards compatible)."""
-    table_texts = []
+def extract_meta(soup: BeautifulSoup) -> dict:
+    """Extract Open Graph, meta description, and keywords."""
+    meta = {}
+    for tag in soup.find_all("meta"):
+        name = tag.get("name") or tag.get("property") or ""
+        content = tag.get("content") or ""
+        if name and content:
+            meta[name.lower()] = content
+    return {k: v for k, v in meta.items() if k in (
+        "description", "keywords", "og:title", "og:description", "og:image"
+    )}
+
+
+def extract_links(soup: BeautifulSoup, base_url: str) -> list[str]:
+    """Extract all internal links from a page."""
+    links = []
+    for a in soup.find_all("a", href=True):
+        href = a["href"].strip()
+        if href.startswith("/"):
+            href = f"https://{CFG.base_domain}{href}"
+        if CFG.base_domain in href and href.startswith("http"):
+            links.append(href)
+    return list(set(links))
+
+
+def extract_infobox(soup: BeautifulSoup) -> dict:
+    infobox = {}
     for table in soup.find_all("table"):
         for row in table.find_all("tr"):
-            cols = [
-                c.get_text(" ", strip=True)
-                for c in row.find_all(["td", "th"])
-            ]
+            cols = row.find_all(["td", "th"])
+            if len(cols) == 2:
+                key = cols[0].get_text(strip=True)
+                val = cols[1].get_text(strip=True)
+                if len(key) < 40 and key:
+                    infobox[key] = val
+    return infobox
+
+
+def extract_tables(soup: BeautifulSoup, folder: Path):
+    tables = soup.find_all("table")
+    if not tables:
+        return
+    table_dir = folder / "tables"
+    table_dir.mkdir(exist_ok=True)
+    for i, table in enumerate(tables):
+        rows = []
+        for tr in table.find_all("tr"):
+            cols = [c.get_text(strip=True) for c in tr.find_all(["td", "th"])]
             if cols:
-                table_texts.append(" | ".join(cols))
-    return " ".join(table_texts)
+                rows.append(cols)
+        if rows:
+            with open(table_dir / f"table_{i}.csv", "w", newline="", encoding="utf-8") as f:
+                csv.writer(f).writerows(rows)
+
+# ================= SAVE =================
+
+def page_folder(url: str) -> Path:
+    slug = re.sub(r"[^a-zA-Z0-9]+", "_", url)
+    h = hashlib.md5(url.encode()).hexdigest()[:8]
+    return CFG.data_dir / f"{slug[:60]}_{h}"
 
 
-# ================= CAMPUS CLASSIFICATION =================
-
-CAMPUS_RULES = [
-    {"id": "ktr", "names": ["ktr", "kattankulathur", "chennai main"]},
-    {"id": "rmp", "names": ["rmp", "ramapuram"]},
-    {"id": "vdp", "names": ["vdp", "vadapalani"]},
-    {"id": "ncr", "names": ["ncr", "modinagar", "delhi"]},
-    {"id": "trp", "names": ["trp", "tiruchirappalli", "trichy"]},
-    {"id": "ap", "names": ["amaravati", "andhra pradesh"]},
-]
+def already_scraped(url: str) -> bool:
+    folder = page_folder(url)
+    return (folder / "content.txt").exists()
 
 
-def extract_campus(url: str, text: str) -> str:
-    """Identify the specific campus from URL or content."""
-    url_lower = url.lower()
-    text_lower = text.lower()
-
-    # Priority 1: URL path
-    for campus in CAMPUS_RULES:
-        if campus["id"] in url_lower:
-            return campus["id"]
-        for name in campus["names"]:
-            if name in url_lower:
-                return campus["id"]
-
-    # Priority 2: Content mentions (count occurrences)
-    campus_scores = {}
-    for campus in CAMPUS_RULES:
-        score = 0
-        for name in campus["names"]:
-            score += text_lower.count(name)
-        if score > 0:
-            campus_scores[campus["id"]] = score
-
-    if campus_scores:
-        # Return the one with highest mentions
-        return max(campus_scores, key=campus_scores.get)
-
-    return "ktr"  # Default to KTR as per project scope
-
-
-# ================= CLEAN TEXT =================
-
-def extract_page_data(html: str, url: str) -> dict | None:
-    """Extract enriched page data with title, category, campus, tables, and clean content."""
+def save_page(url: str, html: str) -> bool:
     soup = BeautifulSoup(html, "html.parser")
+    content = clean_text(soup)
 
-    main_content = soup.find("main") or soup.find("article") or soup.body
-    if not main_content:
-        return None
+    if len(content) < CFG.min_content_len:
+        return False
 
-    # Extract title before decomposing tags
-    title = extract_page_title(soup)
+    folder = page_folder(url)
+    folder.mkdir(parents=True, exist_ok=True)
 
-    # Extract structured tables before decomposing
-    tables_structured = extract_tables_structured(soup)
-    tables_text = extract_tables_text(soup)
+    (folder / "content.txt").write_text(content, encoding="utf-8")
+    (folder / "raw.html").write_text(html, encoding="utf-8")
 
-    # Remove noise tags
-    for tag in main_content([
-        "script", "style", "nav", "footer",
-        "header", "aside", "form"
-    ]):
-        tag.decompose()
-
-    text = main_content.get_text(" ", strip=True)
-
-    # Append table text so it's searchable in the content field
-    if tables_text:
-        text += " " + tables_text
-
-    text = re.sub(r"\s+", " ", text).strip()
-
-    if len(text) < 250:
-        return None
-
-    # Classify into a domain category
-    category = classify_category(url, text)
-
-    # Extract campus
-    campus = extract_campus(url, text)
-
-    return {
+    metadata = {
         "url": url,
-        "title": title,
-        "category": category,
-        "campus": campus,
-        "content": text,
-        "tables": tables_structured,
+        "title": soup.title.string.strip() if soup.title and soup.title.string else "SRM Page",
+        "scraped_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "meta": extract_meta(soup),
+        "internal_links": extract_links(soup, url),
     }
+    (folder / "metadata.json").write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
 
+    infobox = extract_infobox(soup)
+    if infobox:
+        (folder / "infobox.json").write_text(json.dumps(infobox, indent=2, ensure_ascii=False), encoding="utf-8")
 
-# ================= LINK EXTRACTION =================
+    extract_tables(soup, folder)
+    return True
 
-def extract_links(html: str, base_url: str):
-    soup = BeautifulSoup(html, "html.parser")
-    links = set()
+# ================= WORKER =================
 
-    for a in soup.find_all("a", href=True):
-        href = urljoin(base_url, a["href"]).split("#")[0]
+async def process_url(
+    session: aiohttp.ClientSession,
+    url: str,
+    progress: Progress,
+    robots: Optional[RobotFileParser],
+    semaphore: asyncio.Semaphore,
+):
+    async with semaphore:
+        # Robots check
+        if robots and not robots.can_fetch(CFG.user_agent, url):
+            log.debug(f"[ROBOTS] Disallowed: {url}")
+            progress.update("skipped")
+            return
 
-        if is_valid_url(href):
-            links.add(href)
+        # Resumability
+        if already_scraped(url):
+            log.debug(f"[SKIP] Already scraped: {url}")
+            progress.update("skipped")
+            return
 
-    return links
+        html = await fetch(session, url)
+        if not html:
+            progress.update("failed")
+            return
 
-# ================= PDF HANDLING =================
+        saved = await asyncio.get_event_loop().run_in_executor(None, save_page, url, html)
+        progress.update("saved" if saved else "skipped")
 
-def is_pdf(url: str) -> bool:
-    return url.lower().endswith(".pdf")
+        if progress.done % 100 == 0:
+            progress.log()
 
-def process_pdf(url: str, out_dir: Path, documents: list):
-    try:
-        filename = url.split("/")[-1]
-        path = out_dir / filename
+# ================= MAIN =================
 
-        r = session.get(url, timeout=TIMEOUT)
-        r.raise_for_status()
-        path.write_bytes(r.content)
+async def main():
+    log.info("=" * 60)
+    log.info("SRM Scraper v2 — Starting")
 
-        reader = PdfReader(str(path))
-        pdf_text = ""
+    shutdown = asyncio.Event()
 
-        for page in reader.pages:
-            pdf_text += page.extract_text() or ""
+    def handle_signal(*_):
+        log.warning("Interrupt received — shutting down gracefully...")
+        shutdown.set()
 
-        if len(pdf_text) > 200:
-            # Classify PDF content
-            category = classify_category(url, pdf_text)
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
 
-            documents.append({
-                "url": url,
-                "title": filename.replace(".pdf", "").replace("-", " ").replace("_", " ").title(),
-                "category": category,
-                "content": pdf_text,
-                "tables": [],
-            })
+    headers = {"User-Agent": CFG.user_agent}
+    connector = aiohttp.TCPConnector(limit=CFG.concurrency, ssl=False)
 
-        print(f"[PDF] Processed: {filename}")
+    async with aiohttp.ClientSession(headers=headers, connector=connector) as session:
+        # Load robots.txt
+        robots = None
+        if CFG.respect_robots:
+            robots = load_robots(f"https://{CFG.base_domain}", CFG.user_agent)
 
-    except Exception as e:
-        print(f"[PDF ERROR] {url} -> {e}")
+        # Discover URLs
+        urls = await get_urls(session)
+        urls = [u for u in urls if CFG.base_domain in u][: CFG.max_urls]
+        log.info(f"Queued {len(urls)} URLs (max={CFG.max_urls})")
 
-# ================= MAIN CRAWLER =================
+        progress = Progress(total=len(urls))
+        semaphore = asyncio.Semaphore(CFG.concurrency)
 
-def crawl_srm():
-    visited = set()
-    queue = list(SEED_URLS)
-    documents = []
+        tasks = [
+            asyncio.create_task(
+                process_url(session, url, progress, robots, semaphore)
+            )
+            for url in urls
+        ]
 
-    # Stats tracking
-    category_counts = {}
+        # Run with graceful shutdown support
+        for coro in asyncio.as_completed(tasks):
+            if shutdown.is_set():
+                for t in tasks:
+                    t.cancel()
+                break
+            await coro
+            await asyncio.sleep(CFG.delay_between_batches / CFG.concurrency)
 
-    pdf_dir = Path("data/pdfs")
-    pdf_dir.mkdir(parents=True, exist_ok=True)
+    progress.log()
+    log.info(f"✅ Done — {progress.saved} pages saved to {CFG.data_dir}")
 
-    while queue and len(visited) < MAX_PAGES:
-        url = queue.pop(0)
-
-        if url in visited:
-            continue
-
-        try:
-            print(f"[INFO] Crawling: {url}")
-
-            # ===== PDF =====
-            if is_pdf(url):
-                process_pdf(url, pdf_dir, documents)
-                visited.add(url)
-                continue
-
-            html = fetch_url(url)
-            page_data = extract_page_data(html, url)
-
-            if page_data:
-                documents.append(page_data)
-
-                # Track category distribution
-                cat = page_data["category"]
-                category_counts[cat] = category_counts.get(cat, 0) + 1
-
-            visited.add(url)
-
-            # ===== discover links =====
-            new_links = extract_links(html, url)
-
-            priority_links = []
-            normal_links = []
-
-            for link in new_links:
-                if link in visited or link in queue:
-                    continue
-
-                if any(k in link.lower() for k in PRIORITY_KEYWORDS):
-                    priority_links.append(link)
-                else:
-                    normal_links.append(link)
-
-            queue = priority_links + normal_links + queue
-
-            time.sleep(random.uniform(*CRAWL_DELAY))
-
-        except Exception as e:
-            print(f"[ERROR] {url} -> {e}")
-
-    # ================= SAVE =================
-
-    out = Path("data/raw/srm_data.json")
-    out.parent.mkdir(parents=True, exist_ok=True)
-
-    with open(out, "w", encoding="utf-8") as f:
-        json.dump(documents, f, indent=2, ensure_ascii=False)
-
-    print(f"\n✅ Crawled pages: {len(documents)}")
-    print(f"📄 PDFs processed: {len(list(pdf_dir.glob('*')))}")
-    print(f"📊 Category breakdown: {json.dumps(category_counts, indent=2)}")
-
-# ================= RUN =================
 
 if __name__ == "__main__":
-    crawl_srm()
+    asyncio.run(main())
