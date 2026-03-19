@@ -45,7 +45,7 @@ class Config:
 
     # Retrieval
     retrieval_limit: int = 25       # Candidates from vector DB
-    max_distance: float = 1.2       # Filter out low-quality matches
+    max_distance: float = 1.8       # Filter out low-quality matches
     final_chunk_count: int = 5      # Chunks sent to LLM after reranking
 
     # Embedding batch size
@@ -346,7 +346,7 @@ def retrieve(query: str) -> list[tuple[str, dict, float]]:
 SYSTEM_PROMPT = """You are the official SRM Institute of Science and Technology (KTR campus) admissions assistant.
 
 Rules:
-- Answer ONLY from the provided context. Never hallucinate facts.
+- Answer ONLY from the provided context and tell relevant facts.
 - If the context does not contain enough information, say: "I don't have enough information about this. Please visit https://www.srmist.edu.in or contact admissions."
 - Always cite the source URL at the end of your answer under "Sources:".
 - Be concise and factual. Use bullet points for lists."""
@@ -408,6 +408,9 @@ def call_llm(prompt: str, stream: bool = CFG.llm_stream) -> str:
 
 # ================= RAG QUERY =================
 
+# Common greetings to intercept before hitting the vector DB
+_GREETINGS = {"hi", "hello", "hey", "hii", "helo", "yo", "sup", "greetings"}
+
 def query_rag(question: str) -> dict:
     """
     Returns {"answer": str, "sources": list[str]}
@@ -416,13 +419,23 @@ def query_rag(question: str) -> dict:
     log.info(f"Query: {question!r}")
     t0 = time.time()
 
+    # Intercept greetings — no point hitting the vector DB for these
+    if question.lower().strip().rstrip("!?.") in _GREETINGS:
+        return {
+            "answer": (
+                "Hello! 👋 I'm the SRM KTR Admission Assistant. "
+                "Ask me anything about admissions, fees, courses, or campus life!"
+            ),
+            "sources": [],
+        }
+
     chunks = retrieve(question)
 
     if not chunks:
         return {
             "answer": (
-                "I couldn't find relevant information for your question. "
-                "Please visit https://www.srmist.edu.in or contact the admissions office."
+                "I don't have specific information about that. "
+                "Please visit https://www.srmist.edu.in or contact the SRM admissions office directly."
             ),
             "sources": [],
         }

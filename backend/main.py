@@ -55,12 +55,13 @@ app.add_middleware(
 async def home():
     return {"message": "SRM Chatbot API 🚀"}
 
+
 @app.get("/health", response_model=HealthResponse)
 async def health():
     try:
         count = get_collection().count()
         db_status = f"ok ({count} chunks)"
-    except:
+    except Exception:
         db_status = "error"
 
     return HealthResponse(
@@ -89,27 +90,25 @@ async def chat(req: ChatRequest):
         logger.info(f"💬 Query: {question}")
 
         loop = asyncio.get_event_loop()
-
-        # ✅ IMPORTANT CHANGE HERE
         result = await loop.run_in_executor(None, partial(query_rag, question))
 
-        # query_rag now returns dict
+        # query_rag returns {"answer": str, "sources": list[str]}
         answer = result.get("answer", "")
         sources_raw = result.get("sources", [])
 
         if not answer:
             answer = "No relevant information found."
 
-        # ✅ FIXED: Proper structured sources
+        # Build sources — Source model requires index + url + title (all 3)
         seen = set()
         sources = []
-
         for src in sources_raw:
             if src and src not in seen:
                 seen.add(src)
                 sources.append({
+                    "index": len(sources) + 1,
                     "url": src,
-                    "title": src
+                    "title": src,
                 })
 
         response_data = {
@@ -121,6 +120,7 @@ async def chat(req: ChatRequest):
         }
 
         cache.set(question, response_data)
+        logger.info(f"✅ Answered: {question[:50]}")
 
         return ChatResponse(**response_data)
 
@@ -140,6 +140,7 @@ async def build_database():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/admin/rebuild-db")
 async def rebuild_database():
     try:
@@ -155,6 +156,7 @@ async def rebuild_database():
 @app.get("/cache/stats")
 async def cache_stats():
     return cache.stats()
+
 
 @app.post("/cache/clear")
 async def clear_cache():
