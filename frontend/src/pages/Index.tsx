@@ -1,6 +1,13 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, ExternalLink } from "lucide-react";
-import FloatingOrbs from "@/components/FloatingOrbs";
+import { Send, Bot, ExternalLink, MapPin, RefreshCw, CornerDownLeft } from "lucide-react";
+import srmLogo from "@/assets/logo.png";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Message {
   id: number;
@@ -11,81 +18,66 @@ interface Message {
   program?: string | null;
 }
 
+const SUGGESTION_SETS = [
+  [
+    "What are the B.Tech fees?",
+    "How does SRM admission work?",
+    "Tell me about hostel facilities",
+    "What courses are available?",
+  ],
+  [
+    "SRMJEEE exam details",
+    "Scholarship opportunities",
+    "Campus placement stats",
+    "PhD admission process",
+  ],
+  [
+    "Management quota seats",
+    "NRI admission process",
+    "Fee payment schedule",
+    "Lateral entry eligibility",
+  ],
+];
+
 /**
- * Renders a markdown-like string into React elements.
- * Supports: **bold**, bullet points (•/-), headings (##), and [link](url).
+ * Renders markdown-like text to React elements.
  */
 const renderMarkdown = (text: string) => {
   const lines = text.split("\n");
-
   return lines.map((line, i) => {
-    // Heading lines
     if (line.startsWith("### ")) {
-      return (
-        <h4 key={i} className="font-semibold text-sm mt-2 mb-1 text-foreground/90">
-          {line.replace("### ", "")}
-        </h4>
-      );
+      return <h4 key={i} className="font-semibold text-sm mt-2 mb-1 text-gray-800">{line.replace("### ", "")}</h4>;
     }
     if (line.startsWith("## ")) {
-      return (
-        <h3 key={i} className="font-bold text-sm mt-3 mb-1 text-foreground">
-          {line.replace("## ", "")}
-        </h3>
-      );
+      return <h3 key={i} className="font-bold text-sm mt-3 mb-1 text-gray-900">{line.replace("## ", "")}</h3>;
     }
-
-    // Empty lines
     if (line.trim() === "") return <br key={i} />;
 
-    // Bullet points
     const isBullet =
       line.trimStart().startsWith("•") ||
       line.trimStart().startsWith("- ") ||
       line.trimStart().startsWith("* ");
 
-    // Process inline formatting: **bold** and [text](url)
     const processInline = (str: string) => {
       const parts: (string | JSX.Element)[] = [];
       const regex = /(\*\*(.+?)\*\*|\[([^\]]+)\]\(([^)]+)\))/g;
       let lastIndex = 0;
       let match;
-
       while ((match = regex.exec(str)) !== null) {
-        if (match.index > lastIndex) {
-          parts.push(str.slice(lastIndex, match.index));
-        }
-
+        if (match.index > lastIndex) parts.push(str.slice(lastIndex, match.index));
         if (match[2]) {
-          // Bold
-          parts.push(
-            <strong key={match.index} className="font-semibold">
-              {match[2]}
-            </strong>
-          );
+          parts.push(<strong key={match.index} className="font-semibold">{match[2]}</strong>);
         } else if (match[3] && match[4]) {
-          // Link
           parts.push(
-            <a
-              key={match.index}
-              href={match[4]}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-primary hover:underline transition-colors"
-            >
-              {match[3]}
-              <ExternalLink className="w-3 h-3 inline" />
+            <a key={match.index} href={match[4]} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-blue-600 hover:underline">
+              {match[3]}<ExternalLink className="w-3 h-3 inline" />
             </a>
           );
         }
-
         lastIndex = match.index + match[0].length;
       }
-
-      if (lastIndex < str.length) {
-        parts.push(str.slice(lastIndex));
-      }
-
+      if (lastIndex < str.length) parts.push(str.slice(lastIndex));
       return parts;
     };
 
@@ -93,25 +85,34 @@ const renderMarkdown = (text: string) => {
       const bulletContent = line.trimStart().replace(/^[•\-\*]\s*/, "");
       return (
         <div key={i} className="flex gap-2 ml-1 my-0.5">
-          <span className="text-primary mt-0.5">•</span>
+          <span className="text-blue-500 mt-0.5">•</span>
           <span>{processInline(bulletContent)}</span>
         </div>
       );
     }
-
-    return (
-      <p key={i} className="my-0.5">
-        {processInline(line)}
-      </p>
-    );
+    return <p key={i} className="my-0.5">{processInline(line)}</p>;
   });
+};
+
+const intentLabels: Record<string, string> = {
+  fee_structure: "💰 Fees",
+  admission_process: "📋 Admission",
+  hostel_info: "🏠 Hostel",
+  course_details: "📚 Courses",
+  campus_life: "🎓 Campus",
+  eligibility: "✅ Eligibility",
+  general_query: "💬 General",
 };
 
 const Index = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [selectedCampus, setSelectedCampus] = useState("KTR");
+  const [suggestionSet, setSuggestionSet] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const isWelcome = messages.length === 0;
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -119,17 +120,11 @@ const Index = () => {
     }
   }, [messages, isTyping]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isTyping) return;
+  const handleSend = async (text?: string) => {
+    const userText = (text ?? input).trim();
+    if (!userText || isTyping) return;
 
-    const userText = input.trim();
-
-    const userMsg: Message = {
-      id: Date.now(),
-      content: userText,
-      isUser: true,
-    };
-
+    const userMsg: Message = { id: Date.now(), content: userText, isUser: true };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setIsTyping(true);
@@ -140,9 +135,7 @@ const Index = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: userText }),
       });
-
       const data = await res.json();
-
       setMessages((prev) => [
         ...prev,
         {
@@ -154,14 +147,10 @@ const Index = () => {
           program: data.program,
         },
       ]);
-    } catch (error) {
+    } catch {
       setMessages((prev) => [
         ...prev,
-        {
-          id: Date.now() + 1,
-          content: "⚠️ Cannot connect to SRM server. Please try again.",
-          isUser: false,
-        },
+        { id: Date.now() + 1, content: "⚠️ Cannot connect to SRM server. Please try again.", isUser: false },
       ]);
     }
 
@@ -175,108 +164,203 @@ const Index = () => {
     }
   };
 
-  const intentLabels: Record<string, string> = {
-    fee_structure: "💰 Fees",
-    admission_process: "📋 Admission",
-    hostel_info: "🏠 Hostel",
-    course_details: "📚 Courses",
-    campus_life: "🎓 Campus",
-    eligibility: "✅ Eligibility",
-    general_query: "💬 General",
+  const refreshSuggestions = () => {
+    setSuggestionSet((prev) => (prev + 1) % SUGGESTION_SETS.length);
   };
 
+  const currentSuggestions = SUGGESTION_SETS[suggestionSet];
+
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-background px-4">
-      <FloatingOrbs />
-
-      <div className="relative z-10 flex flex-col items-center w-full max-w-2xl">
-        {/* Title */}
-        <div className="text-center mb-6 animate-fade-slide-up">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight">
-            <span className="gradient-text">SRM University</span>
-            <br />
-            <span className="text-foreground">Chatbot</span>
-          </h1>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{
+        background: "linear-gradient(160deg, #e0e7ff 0%, #dbeafe 35%, #f0f9ff 65%, #ffffff 100%)",
+      }}
+    >
+      {/* Header */}
+      <header className="flex items-center justify-between px-6 py-4 z-20">
+        <div className="flex items-center gap-2">
+          <img src={srmLogo} alt="SRM Logo" className="h-10 w-auto object-contain" />
         </div>
-
-        {/* Subtitle */}
-        <p className="text-muted-foreground text-base sm:text-lg text-center max-w-md mb-10 animate-fade-slide-up">
-          Ask anything about admissions, fees, courses, and campus.
-        </p>
-
-        {/* Messages */}
-        {messages.length > 0 && (
-          <div
-            ref={scrollRef}
-            className="w-full max-h-[50vh] overflow-y-auto space-y-3 mb-6 px-1 scroll-smooth"
-          >
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${msg.isUser ? "justify-end" : "justify-start"}`}
-              >
-                {!msg.isUser && (
-                  <div className="w-7 h-7 rounded-lg gradient-primary flex items-center justify-center mr-2 mt-1 flex-shrink-0">
-                    <Bot className="w-3.5 h-3.5 text-primary-foreground" />
-                  </div>
-                )}
-                <div className="max-w-[85%] flex flex-col">
-                  <div
-                    className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${msg.isUser
-                        ? "gradient-primary text-primary-foreground"
-                        : "glass text-foreground"
-                      }`}
-                  >
-                    {msg.isUser ? msg.content : renderMarkdown(msg.content)}
-                  </div>
-                  {/* Intent badge for bot messages */}
-                  {!msg.isUser && msg.intent && (
-                    <span className="text-[10px] text-muted-foreground mt-1 px-2 opacity-60">
-                      {intentLabels[msg.intent] || msg.intent}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {isTyping && (
-              <div className="flex justify-start">
-                <div className="w-7 h-7 rounded-lg gradient-primary flex items-center justify-center mr-2 mt-1">
-                  <Bot className="w-3.5 h-3.5 text-primary-foreground" />
-                </div>
-                <div className="glass rounded-2xl px-4 py-3 flex gap-1">
-                  <span className="typing-dot w-2 h-2 rounded-full bg-muted-foreground" />
-                  <span className="typing-dot w-2 h-2 rounded-full bg-muted-foreground" />
-                  <span className="typing-dot w-2 h-2 rounded-full bg-muted-foreground" />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Input */}
-        <div className="w-full">
-          <div className="glass-strong rounded-3xl p-1.5">
+        <Select value={selectedCampus} onValueChange={setSelectedCampus}>
+          <SelectTrigger className="w-[190px] bg-white/70 backdrop-blur-md border border-gray-200 shadow-sm rounded-xl text-sm font-medium text-gray-700">
             <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask me anything about SRM…"
-                disabled={isTyping}
-                className="flex-1 bg-transparent px-5 py-3.5 text-sm outline-none"
-              />
+              <MapPin className="w-4 h-4 text-blue-500 shrink-0" />
+              <SelectValue placeholder="Select Branch" />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="KTR">Kattankulathur</SelectItem>
+            <SelectItem value="Ramapuram">Ramapuram</SelectItem>
+            <SelectItem value="Vadapalani">Vadapalani</SelectItem>
+            <SelectItem value="Ghaziabad">Delhi-NCR (Ghaziabad)</SelectItem>
+            <SelectItem value="Tiruchirappalli">Tiruchirappalli</SelectItem>
+          </SelectContent>
+        </Select>
+      </header>
+
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col items-center px-4 pb-4 min-h-0">
+        {isWelcome ? (
+          /* ── Welcome State ── */
+          <div className="flex flex-col items-center justify-center flex-1 w-full max-w-2xl gap-6">
+            {/* Bot avatar orb */}
+            <div
+              className="w-16 h-16 rounded-full shadow-lg"
+              style={{
+                background: "radial-gradient(circle at 35% 30%, #60a5fa, #2563eb 50%, #1e3a8a)",
+              }}
+            />
+
+            {/* Greeting */}
+            <div className="text-center">
+              <h1 className="text-4xl font-bold text-gray-900 leading-tight">
+                Hello! I'm your SRM guide.
+              </h1>
+              <h2 className="text-3xl font-bold text-gray-900 mt-1">
+                How can I help you today?
+              </h2>
+              <p className="text-gray-500 text-sm mt-3">
+                Choose a prompt below or write your own to start chatting.
+              </p>
+            </div>
+
+            {/* Suggestion chips */}
+            <div className="w-full space-y-3">
+              <div className="grid grid-cols-2 gap-2.5">
+                {currentSuggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleSend(s)}
+                    className="text-left px-4 py-3 rounded-xl bg-white/80 border border-gray-200 text-sm text-gray-700 font-medium hover:bg-white hover:border-blue-300 hover:shadow-sm transition-all duration-150"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
               <button
-                onClick={handleSend}
-                disabled={!input.trim() || isTyping}
-                className="w-10 h-10 flex items-center justify-center rounded-2xl gradient-primary text-primary-foreground disabled:opacity-30"
+                onClick={refreshSuggestions}
+                className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors pl-1"
               >
-                <Send className="w-5 h-5" />
+                <RefreshCw className="w-3.5 h-3.5" />
+                Refresh prompts
               </button>
             </div>
+
+            {/* Input box */}
+            <div className="w-full">
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask me anything about SRM…"
+                  rows={2}
+                  className="w-full resize-none px-5 pt-4 pb-2 text-sm text-gray-800 placeholder-gray-400 outline-none bg-transparent leading-relaxed"
+                />
+                <div className="flex items-center justify-between px-5 pb-3">
+                  <span className="text-xs text-gray-400 font-medium">SRM Admission Bot · {selectedCampus}</span>
+                  <button
+                    onClick={() => handleSend()}
+                    disabled={!input.trim() || isTyping}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-600 text-white disabled:opacity-30 hover:bg-blue-700 transition-colors"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              <p className="text-center text-xs text-gray-400 mt-2">
+                This bot may make mistakes. Double-check important information.&nbsp; &nbsp;
+                Use <kbd className="px-1 py-0.5 rounded bg-gray-100 text-gray-500 font-mono text-[10px]">Shift</kbd>+<kbd className="px-1 py-0.5 rounded bg-gray-100 text-gray-500 font-mono text-[10px]">Enter</kbd> for new line
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          /* ── Chat State ── */
+          <div className="flex flex-col w-full max-w-2xl flex-1 min-h-0 gap-4">
+            {/* Messages */}
+            <div
+              ref={scrollRef}
+              className="flex-1 overflow-y-auto space-y-4 py-4 scroll-smooth"
+              style={{ minHeight: 0 }}
+            >
+              {messages.map((msg) => (
+                <div key={msg.id} className={`flex ${msg.isUser ? "justify-end" : "justify-start"} items-end gap-2`}>
+                  {!msg.isUser && (
+                    <div
+                      className="w-7 h-7 rounded-full shrink-0 mb-1"
+                      style={{
+                        background: "radial-gradient(circle at 35% 30%, #a78bfa, #6d28d9 50%, #312e81)",
+                      }}
+                    />
+                  )}
+                  <div className="max-w-[80%] flex flex-col">
+                    <div
+                      className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                        msg.isUser
+                          ? "bg-blue-100 text-gray-900 rounded-br-sm"
+                          : "bg-white text-gray-900 shadow-sm border border-gray-100 rounded-bl-sm"
+                      }`}
+                    >
+                      {msg.isUser ? msg.content : renderMarkdown(msg.content)}
+                    </div>
+                    {!msg.isUser && msg.intent && (
+                      <span className="text-[10px] text-gray-400 mt-1 px-2">
+                        {intentLabels[msg.intent] || msg.intent}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {isTyping && (
+                <div className="flex items-end gap-2 justify-start">
+                  <div
+                    className="w-7 h-7 rounded-full shrink-0 mb-1"
+                    style={{
+                      background: "radial-gradient(circle at 35% 30%, #60a5fa, #2563eb 50%, #1e3a8a)",
+                    }}
+                  />
+                  <div className="bg-white border border-gray-100 shadow-sm rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1.5">
+                    <span className="typing-dot w-2 h-2 rounded-full bg-gray-400" />
+                    <span className="typing-dot w-2 h-2 rounded-full bg-gray-400" />
+                    <span className="typing-dot w-2 h-2 rounded-full bg-gray-400" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Chat input */}
+            <div className="shrink-0">
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask a follow-up question…"
+                  rows={2}
+                  className="w-full resize-none px-5 pt-4 pb-2 text-sm text-gray-800 placeholder-gray-400 outline-none bg-transparent leading-relaxed"
+                />
+                <div className="flex items-center justify-between px-5 pb-3">
+                  <span className="text-xs text-gray-400 font-medium">SRM Admission Bot · {selectedCampus}</span>
+                  <button
+                    onClick={() => handleSend()}
+                    disabled={!input.trim() || isTyping}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-600 text-white disabled:opacity-30 hover:bg-blue-700 transition-colors"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              <p className="text-center text-xs text-gray-400 mt-2">
+                This bot may make mistakes. Double-check important information.&nbsp; &nbsp;
+                Use <kbd className="px-1 py-0.5 rounded bg-gray-100 text-gray-500 font-mono text-[10px]">Shift</kbd>+<kbd className="px-1 py-0.5 rounded bg-gray-100 text-gray-500 font-mono text-[10px]">Enter</kbd> for new line
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
