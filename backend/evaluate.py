@@ -18,10 +18,11 @@ import json
 import time
 import requests
 from pathlib import Path
+from backend.settings import SETTINGS
 
 # ================= CONFIG =================
 
-API_URL = "http://127.0.0.1:8000/chat"
+API_URL = SETTINGS.eval_api_url
 TEST_DATA_PATH = Path("data/eval/test_queries.json")
 RESULTS_PATH = Path("data/eval/eval_results.json")
 

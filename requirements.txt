@@ -1,6 +1,7 @@
 fastapi
 uvicorn
 requests
+aiohttp
 beautifulsoup4
 chromadb
 sentence-transformers
