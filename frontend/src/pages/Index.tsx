@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, ExternalLink, MapPin, RefreshCw } from "lucide-react";
+import { Send, ExternalLink, MapPin, RefreshCw, Plus } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -33,7 +33,7 @@ interface ChatApiResponse {
 }
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
-const SRM_LOGO = "/favicon.svg";
+const SRM_LOGO = "/srm-logo.png";
 
 const SUGGESTION_SETS = [
   [
@@ -86,12 +86,15 @@ const stripInlineSourcesBlock = (text: string): string => {
   const normalized = text.replace(/\r\n/g, "\n");
   let cleaned = normalized;
 
-  // Remove markdown/plain source section headers and everything after them.
   cleaned = cleaned.replace(/(?:\n|^)\s*\*{0,2}sources?\*{0,2}\s*:\s*[\s\S]*$/i, "");
-
-  // Remove inline trailing source sections when appended to the final sentence.
   cleaned = cleaned.replace(/\s+\*{0,2}sources?\*{0,2}\s*:\s*https?:\/\/\S+\s*$/i, "");
   cleaned = cleaned.replace(/\s+\*{0,2}sources?\*{0,2}\s*:\s*(?:\[[^\]]+\]\([^)]+\)|\[\d+\]|https?:\/\/\S+|,\s*)+\s*$/i, "");
+
+  const fallbackRe = /[\n\r]*\s*I don[''\u2019]?t have (?:enough |specific |)?information.*?(?:contact\s+(?:the\s+)?(?:SRM\s+)?admissions|srmist\.edu\.in)[.!]?\s*/gis;
+  const candidate = cleaned.replace(fallbackRe, "").trim();
+  if (candidate.length >= 40) {
+    cleaned = candidate;
+  }
 
   return cleaned.trim();
 };
@@ -245,18 +248,40 @@ const Index = () => {
     setSuggestionSet((prev) => (prev + 1) % SUGGESTION_SETS.length);
   };
 
+  const handleNewChat = () => {
+    setMessages([]);
+    setInput("");
+    setIsTyping(false);
+  };
+
   const currentSuggestions = SUGGESTION_SETS[suggestionSet];
 
   return (
-    <div
-      className="min-h-screen flex flex-col"
-      style={{
-        background: "linear-gradient(160deg, #cfd9ff 0%, #c8dcff 35%, #e8f3ff 68%, #f4f9ff 100%)",
-      }}
-    >
-      <header className="flex items-center justify-between px-6 py-4 z-20">
-        <div className="flex items-center gap-2">
-          <img src={SRM_LOGO} alt="SRM Logo" className="h-10 w-auto object-contain" />
+    <div className="relative h-screen overflow-hidden">
+      <div
+        className="absolute inset-0 -z-10"
+        style={{
+          background: "linear-gradient(160deg, #cfd9ff 0%, #c8dcff 35%, #e8f3ff 68%, #f4f9ff 100%)",
+        }}
+      />
+      <header className="fixed top-0 left-0 right-0 flex items-start justify-between px-6 py-4 z-20">
+        <div className="flex flex-col gap-2">
+          <a
+            href="https://www.srmist.edu.in"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center rounded-xl bg-white/70 backdrop-blur-md border border-gray-200 shadow-sm px-3 py-2 hover:bg-white/80 transition-colors"
+            aria-label="Open SRM official website"
+          >
+            <img src={SRM_LOGO} alt="SRM Logo" className="h-8 w-auto object-contain" />
+          </a>
+          <button
+            onClick={handleNewChat}
+            className="inline-flex items-center gap-2 rounded-xl bg-white/70 backdrop-blur-md border border-gray-200 shadow-sm px-3 py-2 text-sm font-medium text-gray-700 hover:bg-white/80 transition-colors w-fit"
+          >
+            <Plus className="w-4 h-4 text-blue-500" />
+            New chat
+          </button>
         </div>
         <Select value={selectedCampus} onValueChange={setSelectedCampus}>
           <SelectTrigger className="w-[190px] bg-white/70 backdrop-blur-md border border-gray-200 shadow-sm rounded-xl text-sm font-medium text-gray-700">
@@ -275,7 +300,7 @@ const Index = () => {
         </Select>
       </header>
 
-      <div className="flex-1 flex flex-col items-center px-4 pb-4 min-h-0">
+      <div className="h-full flex flex-col items-center px-4 pb-4 pt-28 min-h-0 overflow-hidden">
         {isWelcome ? (
           <div className="flex flex-col items-center justify-center flex-1 w-full max-w-2xl gap-6">
             <div
@@ -347,25 +372,25 @@ const Index = () => {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col w-full max-w-2xl flex-1 min-h-0 gap-4">
-            <div
-              ref={scrollRef}
-              className="flex-1 overflow-y-auto space-y-4 py-4 scroll-smooth"
-              style={{ minHeight: 0 }}
-            >
+          <div className="flex flex-col w-full max-w-2xl flex-1 min-h-0">
+            <div className="relative flex-1 min-h-0">
+              <div
+                ref={scrollRef}
+                className="h-full overflow-y-auto no-scrollbar space-y-4 py-4 scroll-smooth"
+              >
               {messages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.isUser ? "justify-end" : "justify-start"} items-end gap-2`}>
-                  {!msg.isUser && (
+                <div key={msg.id} className={`flex flex-col ${msg.isUser ? "items-end" : "items-start"}`}>
+                  <div className={`flex ${msg.isUser ? "justify-end" : "justify-start"} items-end gap-2 w-full`}>
+                    {!msg.isUser && (
+                      <div
+                        className="w-7 h-7 rounded-full shrink-0 mb-1"
+                        style={{
+                          background: "radial-gradient(circle at 35% 30%, #60a5fa, #2563eb 50%, #1e3a8a)",
+                        }}
+                      />
+                    )}
                     <div
-                      className="w-7 h-7 rounded-full shrink-0 mb-1"
-                      style={{
-                        background: "radial-gradient(circle at 35% 30%, #a78bfa, #6d28d9 50%, #312e81)",
-                      }}
-                    />
-                  )}
-                  <div className="max-w-[80%] flex flex-col">
-                    <div
-                      className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                      className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
                         msg.isUser
                           ? "bg-blue-50 text-gray-900 rounded-br-sm"
                           : "bg-white text-gray-900 shadow-sm border border-gray-100 rounded-bl-sm"
@@ -373,28 +398,28 @@ const Index = () => {
                     >
                       {msg.isUser ? msg.content : renderMarkdown(msg.content, msg.sources)}
                     </div>
-                    {!msg.isUser && msg.sources && msg.sources.length > 0 && (
-                      <details className="mt-2 px-2 group">
-                        <summary className="cursor-pointer list-none text-[11px] text-gray-500 hover:text-gray-700 select-none inline-flex items-center gap-1">
-                          <span className="inline-block transition-transform group-open:rotate-90">▶</span>
-                          Sources ({msg.sources.length})
-                        </summary>
-                        <div className="mt-2 space-y-1">
-                          {msg.sources.map((source, index) => (
-                            <a
-                              key={`${msg.id}-source-${index}`}
-                              href={source.url || "#"}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block truncate text-xs text-blue-600 hover:underline"
-                            >
-                              [{index + 1}] {source.title || source.url || `Source ${index + 1}`}
-                            </a>
-                          ))}
-                        </div>
-                      </details>
-                    )}
                   </div>
+                  {!msg.isUser && msg.sources && msg.sources.length > 0 && (
+                    <details className="mt-2 px-2 group ml-9 max-w-[80%]">
+                      <summary className="cursor-pointer list-none text-[11px] text-gray-500 hover:text-gray-700 select-none inline-flex items-center gap-1">
+                        <span className="inline-block transition-transform group-open:rotate-90">▶</span>
+                        Sources ({msg.sources.length})
+                      </summary>
+                      <div className="mt-2 space-y-1">
+                        {msg.sources.map((source, index) => (
+                          <a
+                            key={`${msg.id}-source-${index}`}
+                            href={source.url || "#"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block truncate text-xs text-blue-600 hover:underline"
+                          >
+                            [{index + 1}] {source.title || source.url || `Source ${index + 1}`}
+                          </a>
+                        ))}
+                      </div>
+                    </details>
+                  )}
                 </div>
               ))}
 
@@ -413,9 +438,10 @@ const Index = () => {
                   </div>
                 </div>
               )}
+              </div>
             </div>
 
-            <div className="shrink-0">
+            <div className="shrink-0 pt-2">
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <textarea
                   ref={inputRef}

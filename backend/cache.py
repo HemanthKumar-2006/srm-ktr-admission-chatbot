@@ -1,7 +1,9 @@
 """
 Lightweight LRU cache for the SRM Chatbot.
 Caches identical queries to avoid redundant LLM + VectorDB calls.
-Uses Python's built-in functools.lru_cache under the hood.
+
+Cache keys include a config_version so that stale entries from old
+prompt/pipeline versions are never served after a code change.
 """
 
 import hashlib
@@ -13,27 +15,32 @@ from threading import Lock
 class QueryCache:
     """
     Thread-safe LRU cache for chat responses.
-    
-    - max_size: Maximum number of cached entries
+
+    - max_size:  Maximum number of cached entries
     - ttl_seconds: Time-to-live per entry (default 1 hour)
+    - config_version: Arbitrary string mixed into every key so a
+      prompt/pipeline change automatically invalidates old entries.
     """
 
-    def __init__(self, max_size: int = 500, ttl_seconds: int = 3600):
+    def __init__(
+        self,
+        max_size: int = 500,
+        ttl_seconds: int = 3600,
+        config_version: str = "1",
+    ):
         self.max_size = max_size
         self.ttl = ttl_seconds
+        self._config_version = config_version
         self._cache: OrderedDict[str, dict] = OrderedDict()
         self._lock = Lock()
         self._hits = 0
         self._misses = 0
 
-    @staticmethod
-    def _make_key(query: str) -> str:
-        """Normalize and hash the query string."""
-        normalized = query.lower().strip()
+    def _make_key(self, query: str) -> str:
+        normalized = f"{self._config_version}:{query.lower().strip()}"
         return hashlib.md5(normalized.encode()).hexdigest()
 
     def get(self, query: str) -> dict | None:
-        """Retrieve a cached response, or None if miss/expired."""
         key = self._make_key(query)
 
         with self._lock:
@@ -43,19 +50,16 @@ class QueryCache:
 
             entry = self._cache[key]
 
-            # Check TTL
             if time.time() - entry["timestamp"] > self.ttl:
                 del self._cache[key]
                 self._misses += 1
                 return None
 
-            # Move to end (most recently used)
             self._cache.move_to_end(key)
             self._hits += 1
             return entry["data"]
 
     def set(self, query: str, data: dict):
-        """Store a response in the cache."""
         key = self._make_key(query)
 
         with self._lock:
@@ -64,11 +68,10 @@ class QueryCache:
                 self._cache[key] = {"data": data, "timestamp": time.time()}
             else:
                 if len(self._cache) >= self.max_size:
-                    self._cache.popitem(last=False)  # Evict oldest
+                    self._cache.popitem(last=False)
                 self._cache[key] = {"data": data, "timestamp": time.time()}
 
     def stats(self) -> dict:
-        """Return cache statistics."""
         with self._lock:
             total = self._hits + self._misses
             return {
@@ -80,12 +83,12 @@ class QueryCache:
             }
 
     def clear(self):
-        """Flush all cached entries."""
         with self._lock:
             self._cache.clear()
             self._hits = 0
             self._misses = 0
 
 
-# Singleton instance
-cache = QueryCache(max_size=500, ttl_seconds=3600)
+_CACHE_VERSION = "v2-broadened-prompt"
+
+cache = QueryCache(max_size=500, ttl_seconds=3600, config_version=_CACHE_VERSION)

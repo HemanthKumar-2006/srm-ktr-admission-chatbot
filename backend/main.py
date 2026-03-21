@@ -23,16 +23,18 @@ logger = logging.getLogger("srm_chatbot")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🚀 SRM Admission Chatbot starting up...")
+    logger.info("SRM Chatbot starting up...")
+    cache.clear()
+    logger.info("Cache cleared (new config version)")
     try:
         count = get_collection().count()
-        logger.info(f"📊 Vector DB chunks loaded: {count}")
+        logger.info(f"Vector DB chunks loaded: {count}")
         if count == 0:
-            logger.warning("⚠️ Vector DB is empty — run build_db first.")
+            logger.warning("Vector DB is empty -- run build_db first.")
     except Exception as e:
-        logger.error(f"❌ Could not reach Vector DB: {e}")
+        logger.error(f"Could not reach Vector DB: {e}")
     yield
-    logger.info("👋 Shutting down...")
+    logger.info("Shutting down...")
 
 # ================= APP =================
 
@@ -54,7 +56,7 @@ app.add_middleware(
 
 @app.get("/")
 async def home():
-    return {"message": "SRM Chatbot API 🚀"}
+    return {"message": "SRM Chatbot API"}
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -84,11 +86,11 @@ async def chat(req: ChatRequest):
     # ================= CACHE =================
     cached = cache.get(question)
     if cached:
-        logger.info(f"💾 Cache HIT: {question[:50]}")
+        logger.info(f"Cache HIT: {question[:50]}")
         return ChatResponse(**cached)
 
     try:
-        logger.info(f"💬 Query: {question}")
+        logger.info(f"Query: {question}")
 
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(None, partial(query_rag, question))
@@ -121,12 +123,12 @@ async def chat(req: ChatRequest):
         }
 
         cache.set(question, response_data)
-        logger.info(f"✅ Answered: {question[:50]}")
+        logger.info(f"Answered: {question[:50]}")
 
         return ChatResponse(**response_data)
 
     except Exception as e:
-        logger.error(f"❌ Chat error: {e}", exc_info=True)
+        logger.error(f"Chat error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 # ================= ADMIN =================

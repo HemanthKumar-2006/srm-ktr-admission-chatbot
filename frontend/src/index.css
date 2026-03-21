@@ -69,6 +69,15 @@
 }
 
 @layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   .glass {
     background: hsl(var(--glass) / 0.6);
     backdrop-filter: blur(24px);

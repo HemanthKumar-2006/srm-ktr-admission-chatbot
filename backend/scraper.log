@@ -1,0 +1,98 @@
+2026-03-19 18:01:32,723 [INFO] ============================================================
+2026-03-19 18:01:32,723 [INFO] SRM Scraper v2 — Starting
+2026-03-19 18:01:34,495 [INFO] Loaded robots.txt from https://www.srmist.edu.in/robots.txt
+2026-03-19 18:01:34,495 [INFO] Fetching sitemap index: https://www.srmist.edu.in/sitemap.xml
+2026-03-19 18:01:36,655 [INFO] Found 15 child sitemaps
+2026-03-19 18:01:42,494 [INFO] Total URLs discovered: 7953
+2026-03-19 18:01:42,495 [INFO] Queued 7953 URLs (max=8000)
+2026-03-19 18:02:27,968 [INFO] Progress: 100/7953 | Saved: 100 | Failed: 0 | Skipped: 0 | ETA: 59m30s
+2026-03-19 18:03:21,129 [INFO] Progress: 200/7953 | Saved: 195 | Failed: 0 | Skipped: 5 | ETA: 63m43s
+2026-03-19 18:04:04,631 [INFO] Progress: 300/7953 | Saved: 292 | Failed: 0 | Skipped: 8 | ETA: 60m25s
+2026-03-19 18:04:32,944 [WARNING] [ERROR] Attempt 1/3 for https://www.srmist.edu.in/department/department-of-mechatronics/publications/: TimeoutError
+2026-03-19 18:04:59,782 [INFO] Progress: 400/7953 | Saved: 391 | Failed: 0 | Skipped: 9 | ETA: 62m05s
+2026-03-19 18:05:45,025 [INFO] Progress: 500/7953 | Saved: 491 | Failed: 0 | Skipped: 9 | ETA: 60m15s
+2026-03-19 18:06:17,969 [INFO] Progress: 600/7953 | Saved: 589 | Failed: 0 | Skipped: 11 | ETA: 56m15s
+2026-03-19 18:07:04,361 [INFO] Progress: 700/7953 | Saved: 688 | Failed: 0 | Skipped: 12 | ETA: 55m34s
+2026-03-19 18:07:42,709 [INFO] Progress: 800/7953 | Saved: 786 | Failed: 0 | Skipped: 14 | ETA: 53m40s
+2026-03-19 18:08:22,145 [INFO] Progress: 900/7953 | Saved: 885 | Failed: 0 | Skipped: 15 | ETA: 52m11s
+2026-03-19 18:09:04,754 [INFO] Progress: 1000/7953 | Saved: 981 | Failed: 0 | Skipped: 19 | ETA: 51m15s
+2026-03-19 18:09:38,236 [INFO] Progress: 1100/7953 | Saved: 1080 | Failed: 0 | Skipped: 20 | ETA: 49m23s
+2026-03-19 18:10:10,094 [INFO] Progress: 1200/7953 | Saved: 1179 | Failed: 0 | Skipped: 21 | ETA: 47m36s
+2026-03-19 18:10:54,508 [INFO] Progress: 1300/7953 | Saved: 1278 | Failed: 0 | Skipped: 22 | ETA: 47m05s
+2026-03-19 18:11:30,133 [INFO] Progress: 1400/7953 | Saved: 1378 | Failed: 0 | Skipped: 22 | ETA: 45m50s
+2026-03-19 18:12:01,943 [INFO] Progress: 1500/7953 | Saved: 1476 | Failed: 0 | Skipped: 24 | ETA: 44m24s
+2026-03-19 18:12:56,293 [INFO] Progress: 1600/7953 | Saved: 1576 | Failed: 0 | Skipped: 24 | ETA: 44m35s
+2026-03-19 18:13:38,773 [INFO] Progress: 1700/7953 | Saved: 1676 | Failed: 0 | Skipped: 24 | ETA: 43m54s
+2026-03-19 18:14:11,417 [INFO] Progress: 1800/7953 | Saved: 1774 | Failed: 1 | Skipped: 25 | ETA: 42m40s
+2026-03-19 18:14:53,709 [INFO] Progress: 1900/7953 | Saved: 1873 | Failed: 1 | Skipped: 26 | ETA: 42m00s
+2026-03-19 18:15:25,546 [INFO] Progress: 2000/7953 | Saved: 1972 | Failed: 1 | Skipped: 27 | ETA: 40m49s
+2026-03-19 18:16:07,358 [INFO] Progress: 2100/7953 | Saved: 2071 | Failed: 1 | Skipped: 28 | ETA: 40m10s
+2026-03-19 18:17:01,005 [INFO] Progress: 2200/7953 | Saved: 2168 | Failed: 1 | Skipped: 31 | ETA: 40m01s
+2026-03-19 18:17:41,332 [INFO] Progress: 2300/7953 | Saved: 2267 | Failed: 1 | Skipped: 32 | ETA: 39m16s
+2026-03-19 18:18:29,791 [INFO] Progress: 2400/7953 | Saved: 2365 | Failed: 1 | Skipped: 34 | ETA: 38m50s
+2026-03-19 18:19:17,181 [INFO] Progress: 2500/7953 | Saved: 2464 | Failed: 1 | Skipped: 35 | ETA: 38m20s
+2026-03-19 18:19:58,351 [INFO] Progress: 2600/7953 | Saved: 2562 | Failed: 1 | Skipped: 37 | ETA: 37m36s
+2026-03-19 18:20:41,907 [WARNING] [ERROR] Attempt 1/3 for https://www.srmist.edu.in/faculty/dr-kaavya-kanagaraj/: TimeoutError
+2026-03-19 18:20:44,913 [WARNING] [ERROR] Attempt 1/3 for https://www.srmist.edu.in/lab/devices-and-circuits-lab/: TimeoutError
+2026-03-19 18:20:45,909 [WARNING] [ERROR] Attempt 1/3 for https://www.srmist.edu.in/faculty/mrs-j-ramaprabha-2/: TimeoutError
+2026-03-19 18:20:48,912 [WARNING] [ERROR] Attempt 1/3 for https://www.srmist.edu.in/events/nextgen-ai-pentathon-2025/: TimeoutError
+2026-03-19 18:21:00,908 [WARNING] [ERROR] Attempt 1/3 for https://www.srmist.edu.in/faculty/ms-janani-s/: TimeoutError
+2026-03-19 18:21:05,128 [INFO] Progress: 2700/7953 | Saved: 2661 | Failed: 1 | Skipped: 38 | ETA: 37m41s
+2026-03-19 18:21:44,141 [INFO] Progress: 2800/7953 | Saved: 2760 | Failed: 1 | Skipped: 39 | ETA: 36m51s
+2026-03-19 18:22:33,977 [INFO] Progress: 2900/7953 | Saved: 2859 | Failed: 1 | Skipped: 40 | ETA: 36m20s
+2026-03-19 18:23:35,455 [INFO] Progress: 3000/7953 | Saved: 2958 | Failed: 1 | Skipped: 41 | ETA: 36m07s
+2026-03-19 18:24:08,993 [INFO] Progress: 3100/7953 | Saved: 3057 | Failed: 1 | Skipped: 42 | ETA: 35m07s
+2026-03-19 18:24:55,867 [INFO] Progress: 3200/7953 | Saved: 3155 | Failed: 1 | Skipped: 44 | ETA: 34m29s
+2026-03-19 18:25:35,061 [INFO] Progress: 3300/7953 | Saved: 3255 | Failed: 1 | Skipped: 44 | ETA: 33m39s
+2026-03-19 18:26:13,719 [INFO] Progress: 3400/7953 | Saved: 3354 | Failed: 1 | Skipped: 45 | ETA: 32m50s
+2026-03-19 18:26:53,281 [INFO] Progress: 3500/7953 | Saved: 3454 | Failed: 1 | Skipped: 45 | ETA: 32m02s
+2026-03-19 18:27:25,233 [INFO] Progress: 3600/7953 | Saved: 3553 | Failed: 1 | Skipped: 46 | ETA: 31m05s
+2026-03-19 18:28:03,002 [INFO] Progress: 3700/7953 | Saved: 3653 | Failed: 1 | Skipped: 46 | ETA: 30m16s
+2026-03-19 18:28:39,814 [INFO] Progress: 3800/7953 | Saved: 3748 | Failed: 3 | Skipped: 49 | ETA: 29m27s
+2026-03-19 18:29:14,225 [INFO] Progress: 3900/7953 | Saved: 3848 | Failed: 3 | Skipped: 49 | ETA: 28m36s
+2026-03-19 18:29:57,688 [INFO] Progress: 4000/7953 | Saved: 3947 | Failed: 3 | Skipped: 50 | ETA: 27m55s
+2026-03-19 18:30:43,832 [INFO] Progress: 4100/7953 | Saved: 4047 | Failed: 3 | Skipped: 50 | ETA: 27m16s
+2026-03-19 18:30:45,916 [WARNING] [ERROR] Attempt 1/3 for https://www.srmist.edu.in/faculty/dr-debdulal-ghosh/: TimeoutError
+2026-03-19 18:30:53,914 [WARNING] [ERROR] Attempt 1/3 for https://www.srmist.edu.in/lab/srm-brin/: TimeoutError
+2026-03-19 18:30:58,906 [WARNING] [ERROR] Attempt 1/3 for https://www.srmist.edu.in/department/srm-dbt-platform/publications/: TimeoutError
+2026-03-19 18:31:33,356 [INFO] Progress: 4200/7953 | Saved: 4145 | Failed: 3 | Skipped: 52 | ETA: 26m40s
+2026-03-19 18:32:07,549 [INFO] Progress: 4300/7953 | Saved: 4243 | Failed: 4 | Skipped: 53 | ETA: 25m50s
+2026-03-19 18:32:51,532 [INFO] Progress: 4400/7953 | Saved: 4342 | Failed: 4 | Skipped: 54 | ETA: 25m09s
+2026-03-19 18:33:22,801 [INFO] Progress: 4500/7953 | Saved: 4441 | Failed: 4 | Skipped: 55 | ETA: 24m18s
+2026-03-19 18:34:13,157 [INFO] Progress: 4600/7953 | Saved: 4541 | Failed: 4 | Skipped: 55 | ETA: 23m41s
+2026-03-19 18:35:06,720 [INFO] Progress: 4700/7953 | Saved: 4640 | Failed: 4 | Skipped: 56 | ETA: 23m07s
+2026-03-19 18:35:43,637 [INFO] Progress: 4800/7953 | Saved: 4740 | Failed: 4 | Skipped: 56 | ETA: 22m20s
+2026-03-19 18:36:16,516 [INFO] Progress: 4900/7953 | Saved: 4840 | Failed: 4 | Skipped: 56 | ETA: 21m32s
+2026-03-19 18:37:02,755 [INFO] Progress: 5000/7953 | Saved: 4940 | Failed: 4 | Skipped: 56 | ETA: 20m52s
+2026-03-19 18:37:43,856 [INFO] Progress: 5100/7953 | Saved: 5040 | Failed: 4 | Skipped: 56 | ETA: 20m09s
+2026-03-19 18:38:18,271 [INFO] Progress: 5200/7953 | Saved: 5139 | Failed: 4 | Skipped: 57 | ETA: 19m22s
+2026-03-19 18:38:53,211 [INFO] Progress: 5300/7953 | Saved: 5239 | Failed: 4 | Skipped: 57 | ETA: 18m36s
+2026-03-19 18:39:27,220 [INFO] Progress: 5400/7953 | Saved: 5337 | Failed: 5 | Skipped: 58 | ETA: 17m50s
+2026-03-19 18:40:00,934 [INFO] Progress: 5500/7953 | Saved: 5437 | Failed: 5 | Skipped: 58 | ETA: 17m05s
+2026-03-19 18:40:52,221 [INFO] Progress: 5600/7953 | Saved: 5535 | Failed: 5 | Skipped: 60 | ETA: 16m27s
+2026-03-19 18:41:45,192 [INFO] Progress: 5700/7953 | Saved: 5635 | Failed: 5 | Skipped: 60 | ETA: 15m49s
+2026-03-19 18:42:24,735 [INFO] Progress: 5800/7953 | Saved: 5734 | Failed: 5 | Skipped: 61 | ETA: 15m06s
+2026-03-19 18:43:08,527 [INFO] Progress: 5900/7953 | Saved: 5831 | Failed: 6 | Skipped: 63 | ETA: 14m25s
+2026-03-19 18:43:48,674 [INFO] Progress: 6000/7953 | Saved: 5930 | Failed: 7 | Skipped: 63 | ETA: 13m42s
+2026-03-19 18:44:28,777 [INFO] Progress: 6100/7953 | Saved: 6030 | Failed: 7 | Skipped: 63 | ETA: 12m59s
+2026-03-19 18:45:14,702 [INFO] Progress: 6200/7953 | Saved: 6129 | Failed: 7 | Skipped: 64 | ETA: 12m18s
+2026-03-19 18:45:53,876 [INFO] Progress: 6300/7953 | Saved: 6228 | Failed: 7 | Skipped: 65 | ETA: 11m35s
+2026-03-19 18:46:28,189 [INFO] Progress: 6400/7953 | Saved: 6327 | Failed: 7 | Skipped: 66 | ETA: 10m51s
+2026-03-19 18:47:04,924 [INFO] Progress: 6500/7953 | Saved: 6425 | Failed: 7 | Skipped: 68 | ETA: 10m08s
+2026-03-19 18:47:53,884 [INFO] Progress: 6600/7953 | Saved: 6523 | Failed: 7 | Skipped: 70 | ETA: 9m28s
+2026-03-19 18:48:34,789 [INFO] Progress: 6700/7953 | Saved: 6622 | Failed: 7 | Skipped: 71 | ETA: 8m45s
+2026-03-19 18:49:07,190 [INFO] Progress: 6800/7953 | Saved: 6720 | Failed: 7 | Skipped: 73 | ETA: 8m02s
+2026-03-19 18:49:52,551 [INFO] Progress: 6900/7953 | Saved: 6817 | Failed: 7 | Skipped: 76 | ETA: 7m21s
+2026-03-19 18:50:39,602 [INFO] Progress: 7000/7953 | Saved: 6917 | Failed: 7 | Skipped: 76 | ETA: 6m39s
+2026-03-19 18:51:14,671 [INFO] Progress: 7100/7953 | Saved: 7014 | Failed: 8 | Skipped: 78 | ETA: 5m57s
+2026-03-19 18:51:44,343 [WARNING] [502] Attempt 1/3: https://www.srmist.edu.in/events/7-day-national-workshop-on-exploring-posthumanism-interdisciplinary-perspectives-and-debates/
+2026-03-19 18:51:57,395 [INFO] Progress: 7200/7953 | Saved: 7113 | Failed: 8 | Skipped: 79 | ETA: 5m15s
+2026-03-19 18:52:44,181 [INFO] Progress: 7300/7953 | Saved: 7207 | Failed: 9 | Skipped: 84 | ETA: 4m33s
+2026-03-19 18:53:18,993 [INFO] Progress: 7400/7953 | Saved: 7305 | Failed: 9 | Skipped: 86 | ETA: 3m51s
+2026-03-19 18:53:55,905 [INFO] Progress: 7500/7953 | Saved: 7403 | Failed: 9 | Skipped: 88 | ETA: 3m09s
+2026-03-19 18:54:37,625 [INFO] Progress: 7600/7953 | Saved: 7502 | Failed: 9 | Skipped: 89 | ETA: 2m27s
+2026-03-19 18:55:14,900 [INFO] Progress: 7700/7953 | Saved: 7601 | Failed: 9 | Skipped: 90 | ETA: 1m45s
+2026-03-19 18:55:59,363 [INFO] Progress: 7800/7953 | Saved: 7698 | Failed: 10 | Skipped: 92 | ETA: 1m03s
+2026-03-19 18:56:33,927 [INFO] Progress: 7900/7953 | Saved: 7795 | Failed: 11 | Skipped: 94 | ETA: 0m22s
+2026-03-19 18:56:53,970 [INFO] Progress: 7953/7953 | Saved: 7848 | Failed: 11 | Skipped: 94 | ETA: 0m00s
+2026-03-19 18:56:53,970 [INFO] ✅ Done — 7848 pages saved to C:\Users\hk06r\OneDrive\ドキュメント\Desktop\srm-ktr-admission-chatbot-main\backend\data\srm_docs

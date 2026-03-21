@@ -340,42 +340,78 @@ def retrieve(query: str) -> list[tuple[str, dict, float]]:
             reverse=True,
         )
 
-    return candidates[: CFG.final_chunk_count]
+    return _diverse_top_k(candidates, CFG.final_chunk_count, max_per_source=2)
+
+
+def _diverse_top_k(
+    candidates: list[tuple[str, dict, float]],
+    k: int,
+    max_per_source: int = 2,
+) -> list[tuple[str, dict, float]]:
+    """
+    Pick top-k chunks while capping how many come from a single source URL.
+    Prevents context from being dominated by one page's repeated chunks.
+    """
+    selected: list[tuple[str, dict, float]] = []
+    source_counts: dict[str, int] = {}
+
+    for item in candidates:
+        src = item[1].get("source", "")
+        count = source_counts.get(src, 0)
+        if count >= max_per_source:
+            continue
+        selected.append(item)
+        source_counts[src] = count + 1
+        if len(selected) >= k:
+            break
+
+    return selected
 
 # ================= PROMPT =================
 
-SYSTEM_PROMPT = """You are the official SRM Institute of Science and Technology (KTR campus) admissions assistant.
+SYSTEM_PROMPT = """You are the official SRM Institute of Science and Technology (SRMIST, KTR campus) assistant.
+You help with ANY question about SRMIST — admissions, fees, courses, events, campus life, placements, hostels, cultural fests, research, and more.
 
 Rules:
-- Answer ONLY from the provided context and tell relevant facts.
-- If the context does not contain enough information, say: "I don't have enough information about this. Please visit https://www.srmist.edu.in or contact admissions."
-- Always cite the source URL at the end of your answer under "Sources:".
+- Answer ONLY from the provided context. Use all relevant facts available.
+- If the context genuinely contains no useful information for the question, say: "I don't have enough information about this. Please visit https://www.srmist.edu.in or contact admissions."
+- Do NOT output fallback text when the context contains relevant information — answer the question instead.
+- Do NOT include a "Sources:" section in your answer — sources are handled separately.
 - Be concise and factual. Use bullet points for lists."""
 
-FALLBACK_MESSAGE = (
-    "I don't have enough information about this. Please visit https://www.srmist.edu.in or contact admissions."
+_SOURCE_TAIL_RE = re.compile(
+    r"(?:\n|^)\s*\*{0,2}sources?\*{0,2}\s*:.*", re.I | re.DOTALL
+)
+
+_FALLBACK_RE = re.compile(
+    r"[\n\r]*\s*I don[''\u2019]?t have (?:enough |specific |)information"
+    r".*?(?:contact\s+(?:the\s+)?(?:SRM\s+)?admissions|srmist\.edu\.in)[.!]?\s*",
+    re.I | re.DOTALL,
 )
 
 
 def clean_answer_text(answer: str) -> str:
     """
-    Remove contradictory fallback text when the model already produced a substantive answer.
+    1) Strip trailing 'Sources:' sections (handled by UI).
+    2) Remove fallback sentences when a substantive answer exists.
+       Works even when the fallback spans multiple lines.
     """
     cleaned = (answer or "").strip()
     if not cleaned:
         return cleaned
 
-    lower = cleaned.lower()
-    fallback_lower = FALLBACK_MESSAGE.lower()
-    idx = lower.find(fallback_lower)
+    cleaned = _SOURCE_TAIL_RE.sub("", cleaned).strip()
+    cleaned = re.sub(
+        r"\s+\*{0,2}sources?\*{0,2}\s*:\s*(?:\[[^\]]*\]\([^)]*\)|https?://\S+|\[\d+\]|,\s*)+\s*$",
+        "",
+        cleaned,
+        flags=re.I,
+    ).strip()
 
-    if idx == -1:
-        return cleaned
+    candidate = _FALLBACK_RE.sub("", cleaned).strip()
+    if len(candidate) >= 40:
+        cleaned = candidate
 
-    prefix = cleaned[:idx].strip()
-    # Keep fallback only when it's effectively the full answer.
-    if prefix and len(prefix) >= 40:
-        return prefix
     return cleaned
 
 
@@ -450,8 +486,8 @@ def query_rag(question: str) -> dict:
     if question.lower().strip().rstrip("!?.") in _GREETINGS:
         return {
             "answer": (
-                "Hello! 👋 I'm the SRM KTR Admission Assistant. "
-                "Ask me anything about admissions, fees, courses, or campus life!"
+                "Hello! 👋 I'm the SRM KTR Assistant. "
+                "Ask me anything about SRMIST — admissions, courses, events, campus life, placements, and more!"
             ),
             "sources": [],
         }
