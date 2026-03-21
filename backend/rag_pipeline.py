@@ -29,36 +29,37 @@ import chromadb
 import requests
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import CrossEncoder, SentenceTransformer
+from backend.settings import SETTINGS
 
 # ================= CONFIG =================
 
 @dataclass
 class Config:
-    data_path: Path = Path("data/srm_docs")
-    vector_db_path: str = "vector_db"
-    collection_name: str = "srm_data"
+    data_path: Path = Path(SETTINGS.rag_data_path)
+    vector_db_path: str = SETTINGS.rag_vector_db_path
+    collection_name: str = SETTINGS.rag_collection_name
 
     # Chunking
-    chunk_size: int = 450
-    chunk_overlap: int = 80
-    min_chunk_length: int = 80
+    chunk_size: int = SETTINGS.rag_chunk_size
+    chunk_overlap: int = SETTINGS.rag_chunk_overlap
+    min_chunk_length: int = SETTINGS.rag_min_chunk_length
 
     # Retrieval
-    retrieval_limit: int = 25       # Candidates from vector DB
-    max_distance: float = 1.8       # Filter out low-quality matches
-    final_chunk_count: int = 5      # Chunks sent to LLM after reranking
+    retrieval_limit: int = SETTINGS.rag_retrieval_limit  # Candidates from vector DB
+    max_distance: float = SETTINGS.rag_max_distance       # Filter out low-quality matches
+    final_chunk_count: int = SETTINGS.rag_final_chunk_count  # Chunks sent to LLM after reranking
 
     # Embedding batch size
-    embed_batch: int = 256
+    embed_batch: int = SETTINGS.rag_embed_batch
 
     # Models
-    embed_model: str = "all-MiniLM-L6-v2"
-    rerank_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    embed_model: str = SETTINGS.rag_embed_model
+    rerank_model: str = SETTINGS.rag_rerank_model
 
     # LLM
-    llm_url: str = "http://localhost:11434/api/generate"
-    llm_model: str = "gemma3"
-    llm_stream: bool = True
+    llm_url: str = SETTINGS.rag_llm_url
+    llm_model: str = SETTINGS.rag_llm_model
+    llm_stream: bool = SETTINGS.rag_llm_stream
 
 CFG = Config()
 
@@ -351,6 +352,32 @@ Rules:
 - Always cite the source URL at the end of your answer under "Sources:".
 - Be concise and factual. Use bullet points for lists."""
 
+FALLBACK_MESSAGE = (
+    "I don't have enough information about this. Please visit https://www.srmist.edu.in or contact admissions."
+)
+
+
+def clean_answer_text(answer: str) -> str:
+    """
+    Remove contradictory fallback text when the model already produced a substantive answer.
+    """
+    cleaned = (answer or "").strip()
+    if not cleaned:
+        return cleaned
+
+    lower = cleaned.lower()
+    fallback_lower = FALLBACK_MESSAGE.lower()
+    idx = lower.find(fallback_lower)
+
+    if idx == -1:
+        return cleaned
+
+    prefix = cleaned[:idx].strip()
+    # Keep fallback only when it's effectively the full answer.
+    if prefix and len(prefix) >= 40:
+        return prefix
+    return cleaned
+
 
 def build_prompt(question: str, chunks: list[tuple[str, dict, float]]) -> str:
     context_parts = []
@@ -452,7 +479,7 @@ def query_rag(question: str) -> dict:
             sources.append(url)
 
     prompt = build_prompt(question, chunks)
-    answer = call_llm(prompt)
+    answer = clean_answer_text(call_llm(prompt))
 
     log.info(f"Total query time: {time.time() - t0:.2f}s")
     return {"answer": answer, "sources": sources}

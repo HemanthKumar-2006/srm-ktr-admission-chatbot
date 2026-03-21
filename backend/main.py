@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.models import ChatRequest, ChatResponse, HealthResponse
 from backend.rag_pipeline import query_rag, get_collection, build_db
 from backend.cache import cache
+from backend.settings import SETTINGS
 
 # ================= LOGGING =================
 
@@ -43,7 +44,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=SETTINGS.api_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
