@@ -14,7 +14,20 @@ Full-stack chatbot for SRM admissions using a local RAG pipeline.
 - Node.js 18+
 - Ollama (or compatible API) running at your configured `RAG_LLM_URL`
 
-## 1) Backend Setup
+## Quick Start (Automated)
+
+For Windows users, you can automatically start both the backend and frontend services by simply double-clicking the **`run.bat`** file in the root directory, or running it from the command line:
+
+```cmd
+run.bat
+```
+
+*(This will open two new terminal windows, install any missing dependencies, and start both the FastAPI server and the Vite React app).*
+
+
+## Manual Setup
+
+### 1) Backend Setup
 
 From repository root:
 
