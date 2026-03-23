@@ -12,6 +12,7 @@ vector_db/
 
 # Data
 data/raw/
+backend/data/
 
 # Node
 node_modules/
