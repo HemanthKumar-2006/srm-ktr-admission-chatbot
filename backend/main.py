@@ -89,7 +89,7 @@ async def chat(req: ChatRequest):
     try:
         logger.info(f"💬 Query: {question}")
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(None, partial(query_rag, question))
 
         # query_rag returns {"answer": str, "sources": list[str]}
@@ -133,7 +133,7 @@ async def chat(req: ChatRequest):
 @app.post("/admin/build-db")
 async def build_database():
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, partial(build_db, False))
         cache.clear()
         return {"message": "DB updated"}
@@ -144,7 +144,7 @@ async def build_database():
 @app.post("/admin/rebuild-db")
 async def rebuild_database():
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, partial(build_db, True))
         cache.clear()
         return {"message": "DB rebuilt"}

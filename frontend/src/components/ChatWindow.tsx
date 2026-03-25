@@ -4,20 +4,21 @@ import ChatMessage from "./ChatMessage";
 import ChatInput from "./ChatInput";
 import TypingIndicator from "./TypingIndicator";
 
+interface Source {
+  index: number;
+  title: string;
+  url: string;
+}
+
 interface Message {
   id: number;
   content: string;
   isUser: boolean;
   timestamp: string;
+  sources?: Source[];
 }
 
-const botResponses = [
-  "That's a great question! Let me think about that for a moment. 🤔",
-  "I'd be happy to help you with that! Here's what I think... ✨",
-  "Interesting perspective! Based on my analysis, I'd suggest exploring that further. 🚀",
-  "Absolutely! I can definitely assist with that. Let me break it down for you. 💡",
-  "Great idea! Here are some suggestions that might help you get started. 🎯",
-];
+const API_URL = "/api/chat";
 
 const getTime = () =>
   new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -26,20 +27,7 @@ const ChatWindow = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      content: "Hey there! 👋 I'm Nova, your AI assistant. How can I help you today?",
-      isUser: false,
-      timestamp: getTime(),
-    },
-    {
-      id: 2,
-      content: "Hi Nova! I'd love to learn more about what you can do.",
-      isUser: true,
-      timestamp: getTime(),
-    },
-    {
-      id: 3,
-      content:
-        "I can help with coding, creative writing, analysis, brainstorming, and so much more! Just ask me anything. ✨",
+      content: "Hello! I'm the SRM KTR Admission Assistant. Ask me anything about admissions, fees, courses, or campus life!",
       isUser: false,
       timestamp: getTime(),
     },
@@ -53,7 +41,7 @@ const ChatWindow = () => {
     }
   }, [messages, isTyping]);
 
-  const handleSend = (content: string) => {
+  const handleSend = async (content: string) => {
     const userMsg: Message = {
       id: Date.now(),
       content,
@@ -63,16 +51,37 @@ const ChatWindow = () => {
     setMessages((prev) => [...prev, userMsg]);
     setIsTyping(true);
 
-    setTimeout(() => {
-      setIsTyping(false);
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: content }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server error: ${res.status}`);
+      }
+
+      const data = await res.json();
       const botMsg: Message = {
         id: Date.now() + 1,
-        content: botResponses[Math.floor(Math.random() * botResponses.length)],
+        content: data.response,
+        isUser: false,
+        timestamp: getTime(),
+        sources: data.sources?.length ? data.sources : undefined,
+      };
+      setMessages((prev) => [...prev, botMsg]);
+    } catch (err) {
+      const errorMsg: Message = {
+        id: Date.now() + 1,
+        content: "Sorry, I couldn't connect to the server. Please make sure the backend is running.",
         isUser: false,
         timestamp: getTime(),
       };
-      setMessages((prev) => [...prev, botMsg]);
-    }, 1500 + Math.random() * 1000);
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (
@@ -85,6 +94,7 @@ const ChatWindow = () => {
             content={msg.content}
             isUser={msg.isUser}
             timestamp={msg.timestamp}
+            sources={msg.sources}
             animationDelay={i * 100}
           />
         ))}

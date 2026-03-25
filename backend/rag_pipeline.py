@@ -384,7 +384,7 @@ def call_llm(prompt: str, stream: bool = CFG.llm_stream) -> str:
         if not stream:
             return r.json().get("response", "")
 
-        # Stream tokens to stdout and collect full response
+        # Stream tokens and collect full response
         full = []
         for line in r.iter_lines():
             if not line:
@@ -392,14 +392,12 @@ def call_llm(prompt: str, stream: bool = CFG.llm_stream) -> str:
             try:
                 token_data = json.loads(line)
                 token = token_data.get("response", "")
-                print(token, end="", flush=True)
                 full.append(token)
                 if token_data.get("done"):
                     break
             except json.JSONDecodeError:
                 continue
 
-        print()  # newline after streamed output
         return "".join(full)
 
     except requests.RequestException as e:

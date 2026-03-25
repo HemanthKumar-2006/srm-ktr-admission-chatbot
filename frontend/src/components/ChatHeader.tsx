@@ -11,10 +11,10 @@ const ChatHeader = () => {
       </div>
       <div className="flex-1">
         <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-          Nova AI
+          SRM KTR Admission Assistant
           <Sparkles className="w-3.5 h-3.5 text-primary" />
         </h3>
-        <p className="text-xs text-muted-foreground">Always online</p>
+        <p className="text-xs text-muted-foreground">Ask about admissions, fees & courses</p>
       </div>
       <div className="flex gap-1">
         {[0, 1, 2].map((i) => (
