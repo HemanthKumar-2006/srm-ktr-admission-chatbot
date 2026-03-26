@@ -89,6 +89,6 @@ class QueryCache:
             self._misses = 0
 
 
-_CACHE_VERSION = "v2-broadened-prompt"
+_CACHE_VERSION = "v2.1-abbrev-reformulation-fallback"
 
 cache = QueryCache(max_size=500, ttl_seconds=3600, config_version=_CACHE_VERSION)

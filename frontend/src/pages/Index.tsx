@@ -44,15 +44,15 @@ const SUGGESTION_SETS = [
   ],
   [
     "SRMJEEE exam details",
-    "Scholarship opportunities",
-    "Campus placement stats",
-    "PhD admission process",
+    "What scholarship opportunities are available for SRMIST students?",
+    "What are the campus placement statistics for SRMIST?",
+    "What is the PhD admission process at SRMIST?",
   ],
   [
-    "Management quota seats",
-    "NRI admission process",
-    "Fee payment schedule",
-    "Lateral entry eligibility",
+    "How can I apply for management quota seats at SRMIST?",
+    "What is the NRI admission process at SRMIST?",
+    "When and how should B.Tech fees be paid during admission?",
+    "What are the eligibility criteria for lateral entry into B.Tech at SRMIST?",
   ],
 ];
 

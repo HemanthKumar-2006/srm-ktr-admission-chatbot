@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.models import ChatRequest, ChatResponse, HealthResponse
-from backend.rag_pipeline import query_rag, get_collection, build_db
+from backend.rag_pipeline import query_rag, get_collection, build_db, LLMError
 from backend.cache import cache
 from backend.settings import SETTINGS
 
@@ -95,14 +95,15 @@ async def chat(req: ChatRequest):
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(None, partial(query_rag, question))
 
-        # query_rag returns {"answer": str, "sources": list[str]}
         answer = result.get("answer", "")
         sources_raw = result.get("sources", [])
 
         if not answer:
-            answer = "No relevant information found."
+            answer = (
+                "I couldn't find relevant information about that. "
+                "Please visit https://www.srmist.edu.in or contact the SRM admissions office."
+            )
 
-        # Build sources — Source model requires index + url + title (all 3)
         seen = set()
         sources = []
         for src in sources_raw:
@@ -126,6 +127,16 @@ async def chat(req: ChatRequest):
         logger.info(f"Answered: {question[:50]}")
 
         return ChatResponse(**response_data)
+
+    except LLMError as e:
+        logger.error(f"LLM error for query: {question[:50]} — {e}")
+        return ChatResponse(
+            response=str(e),
+            intent="error",
+            sources=[],
+            campus=None,
+            program=None,
+        )
 
     except Exception as e:
         logger.error(f"Chat error: {e}", exc_info=True)
