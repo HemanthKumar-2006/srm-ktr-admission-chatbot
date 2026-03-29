@@ -25,5 +25,8 @@ Thumbs.db
 # Env
 .env
 
+# Logs
+*.log
+
 # Ollama
 *.gguf

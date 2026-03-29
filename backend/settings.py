@@ -60,7 +60,15 @@ class Settings:
 
 def load_settings() -> Settings:
     return Settings(
-        api_allowed_origins=_csv_env("API_ALLOWED_ORIGINS", ["http://localhost:8080"]),
+        api_allowed_origins=_csv_env(
+            "API_ALLOWED_ORIGINS",
+            [
+                "http://localhost:8080",
+                "http://127.0.0.1:8080",
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+            ],
+        ),
         rag_data_path=os.getenv("RAG_DATA_PATH", "data/srm_docs"),
         rag_vector_db_path=os.getenv("RAG_VECTOR_DB_PATH", "vector_db"),
         rag_collection_name=os.getenv("RAG_COLLECTION_NAME", "srm_data"),
