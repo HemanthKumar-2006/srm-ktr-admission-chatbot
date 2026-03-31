@@ -188,6 +188,7 @@ const Index = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [selectedCampus, setSelectedCampus] = useState("KTR");
   const [suggestionSet, setSuggestionSet] = useState(0);
+  const [sessionId] = useState(() => crypto.randomUUID());
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const isWelcome = messages.length === 0;
@@ -211,7 +212,7 @@ const Index = () => {
       const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: userText }),
+        body: JSON.stringify({ query: userText, campus: selectedCampus, session_id: sessionId }),
       });
       const data: ChatApiResponse = await res.json();
       const cleanedResponse = stripInlineSourcesBlock(data.response || "No response from server.");

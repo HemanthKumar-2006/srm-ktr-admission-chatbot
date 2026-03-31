@@ -9,6 +9,8 @@ venv/
 
 # Vector DB
 vector_db/
+vector_db_qdrant/
+*.pkl
 
 # Data
 data/raw/

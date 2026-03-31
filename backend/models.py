@@ -11,6 +11,8 @@ from pydantic import BaseModel, Field
 class ChatRequest(BaseModel):
     """Incoming chat request from the frontend."""
     query: str = Field(..., min_length=1, max_length=2000, description="The user's question")
+    campus: str | None = Field(default=None, description="Selected campus filter (KTR, Ramapuram, etc.)")
+    session_id: str | None = Field(default=None, description="Session ID for conversation memory")
 
 
 # ================= RESPONSE MODELS =================

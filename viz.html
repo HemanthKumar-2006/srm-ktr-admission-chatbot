@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SRM Knowledge Graph Visualization</title>
+  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <style type="text/css">
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      overflow: hidden;
+    }
+    #mynetwork {
+      width: 100vw;
+      height: 100vh;
+    }
+    #loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 20px;
+      background: rgba(15,23,42,0.92);
+      padding: 20px 32px;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      z-index: 100;
+    }
+    #legend {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: rgba(15,23,42,0.92);
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 12px;
+      z-index: 100;
+      min-width: 200px;
+    }
+    #legend h4 { margin-bottom: 8px; font-size: 13px; color: #94a3b8; letter-spacing: 0.05em; text-transform: uppercase; }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.3); }
+  </style>
+</head>
+<body>
+<div id="loading">⏳ Loading knowledge graph…</div>
+<div id="mynetwork"></div>
+<div id="legend">
+  <h4>Entity Types</h4>
+  <div class="legend-item"><div class="legend-dot" style="background:#c084fc;border-color:#7e22ce"></div> University</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fb923c;border-color:#c2410c"></div> Campus</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f87171;border-color:#b91c1c"></div> College / Faculty</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f9a8d4;border-color:#be185d"></div> Sub-College</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#86efac;border-color:#15803d"></div> Department</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#67e8f9;border-color:#0e7490"></div> Centre</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fde68a;border-color:#b45309"></div> Directorate</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fef08a;border-color:#a16207"></div> Program</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#a7f3d0;border-color:#047857"></div> Facility</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#bfdbfe;border-color:#1d4ed8"></div> Admission</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#e9d5ff;border-color:#6b21a8"></div> Publication</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#e5e7eb;border-color:#6b7280"></div> Misc</div>
+</div>
+
+<script type="text/javascript" src="vector_db_qdrant/knowledge_graph.js"></script>
+<script type="text/javascript">
+  try {
+    const data = window.knowledgeGraphData;
+    if (!data) throw new Error("Knowledge graph JS data not loaded.");
+
+    const nodes = new vis.DataSet(
+        Object.values(data.entities).map(ent => ({
+          id:    ent.id,
+          label: ent.name,
+          title: `<b>${ent.name}</b><br>Type: ${ent.entity_type}<br>Campus: ${ent.campus || '—'}`,
+          group: ent.entity_type
+        }))
+      );
+
+      const edges = new vis.DataSet(
+        data.relationships.map(rel => ({
+          from:  rel.source_id,
+          to:    rel.target_id,
+          label: rel.relation_type.replace(/_/g, ' '),
+          arrows: 'to'
+        }))
+      );
+
+      const options = {
+        nodes: {
+          shape: 'dot',
+          size: 14,
+          font: { size: 12, color: '#e2e8f0' },
+          borderWidth: 2
+        },
+        edges: {
+          width: 1.2,
+          color: { inherit: 'from', opacity: 0.7 },
+          font: { size: 9, align: 'middle', color: '#94a3b8' },
+          smooth: { type: 'continuous' }
+        },
+        physics: {
+          forceAtlas2Based: {
+            gravitationalConstant: -30,
+            centralGravity: 0.004,
+            springLength: 220,
+            springConstant: 0.16
+          },
+          maxVelocity: 146,
+          solver: 'forceAtlas2Based',
+          timestep: 0.35,
+          stabilization: { iterations: 200, updateInterval: 25 }
+        },
+        groups: {
+          university:  { color: { background: '#c084fc', border: '#7e22ce' }, size: 26 },
+          campus:      { color: { background: '#fb923c', border: '#c2410c' }, size: 22 },
+          college:     { color: { background: '#f87171', border: '#b91c1c' }, size: 18 },
+          school:      { color: { background: '#fca5a5', border: '#dc2626' }, size: 16 },
+          sub_college: { color: { background: '#f9a8d4', border: '#be185d' }, size: 16 },
+          department:  { color: { background: '#86efac', border: '#15803d' }, size: 12 },
+          centre:      { color: { background: '#67e8f9', border: '#0e7490' }, size: 12 },
+          directorate: { color: { background: '#fde68a', border: '#b45309' }, size: 15 },
+          program:     { color: { background: '#fef08a', border: '#a16207' }, size: 9  },
+          facility:    { color: { background: '#a7f3d0', border: '#047857' }, size: 13 },
+          admission:   { color: { background: '#bfdbfe', border: '#1d4ed8' }, size: 14 },
+          publication: { color: { background: '#e9d5ff', border: '#6b21a8' }, size: 12 },
+          misc:        { color: { background: '#e5e7eb', border: '#6b7280' }, size: 10 }
+        },
+        interaction: {
+          tooltipDelay: 200,
+          hideEdgesOnDrag: true
+        }
+      };
+
+      const container = document.getElementById('mynetwork');
+      const network   = new vis.Network(container, { nodes, edges }, options);
+
+      network.on('stabilizationIterationsDone', () => {
+        document.getElementById('loading').style.display = 'none';
+      });
+  } catch (err) {
+    document.getElementById('loading').innerText = '❌ Error loading graph: ' + err;
+  }
+</script>
+</body>
+</html>

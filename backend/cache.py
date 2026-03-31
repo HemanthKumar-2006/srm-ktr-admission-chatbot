@@ -89,6 +89,54 @@ class QueryCache:
             self._misses = 0
 
 
-_CACHE_VERSION = "v2.1-abbrev-reformulation-fallback"
+class ConversationMemory:
+    """
+    Lightweight session-based conversation memory.
+    Stores the last N turns per session for pronoun/context resolution.
+    """
+
+    def __init__(self, max_turns: int = 5, max_sessions: int = 200, ttl_seconds: int = 1800):
+        self.max_turns = max_turns
+        self.max_sessions = max_sessions
+        self.ttl = ttl_seconds
+        self._sessions: OrderedDict[str, dict] = OrderedDict()
+        self._lock = Lock()
+
+    def add_turn(self, session_id: str, question: str, answer: str):
+        with self._lock:
+            if session_id not in self._sessions:
+                if len(self._sessions) >= self.max_sessions:
+                    self._sessions.popitem(last=False)
+                self._sessions[session_id] = {"turns": [], "updated": time.time()}
+
+            session = self._sessions[session_id]
+            session["turns"].append({"q": question, "a": answer[:200]})
+            if len(session["turns"]) > self.max_turns:
+                session["turns"] = session["turns"][-self.max_turns:]
+            session["updated"] = time.time()
+            self._sessions.move_to_end(session_id)
+
+    def get_context(self, session_id: str) -> str:
+        with self._lock:
+            if session_id not in self._sessions:
+                return ""
+
+            session = self._sessions[session_id]
+            if time.time() - session["updated"] > self.ttl:
+                del self._sessions[session_id]
+                return ""
+
+            parts = []
+            for turn in session["turns"][-3:]:
+                parts.append(f"User: {turn['q']}\nAssistant: {turn['a']}")
+            return "\n\n".join(parts)
+
+    def clear_session(self, session_id: str):
+        with self._lock:
+            self._sessions.pop(session_id, None)
+
+
+_CACHE_VERSION = "v4.0-kg-hierarchical"
 
 cache = QueryCache(max_size=500, ttl_seconds=3600, config_version=_CACHE_VERSION)
+conversation_memory = ConversationMemory()
