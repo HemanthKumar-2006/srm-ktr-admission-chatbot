@@ -6,6 +6,7 @@
 * **Main Features & Capabilities:**
   * **Custom Knowledge Base:** An asynchronous web scraper that crawls the SRM website to build a local dataset.
   * **Advanced RAG Pipeline:** A Retrieval-Augmented Generation system featuring query reformulation, abbreviation expansion, vector search, and cross-encoder reranking.
+  * **Knowledge Graph Integration:** A lightweight, in-memory entity-relationship graph to accurately answer hierarchical questions (e.g., lists of departments, HOD names, and organizational structure).
   * **Interactive UI:** A modern, responsive React-based chat interface that renders markdown, handles source citations, and provides suggested prompts.
   * **Evaluation Suite:** A built-in evaluation script to measure intent accuracy, keyword recall, citation rates, and faithfulness against a test dataset.
   * **Local Execution:** Fully local execution using Ollama, ensuring privacy and zero API costs.
@@ -18,7 +19,7 @@
   * **Embeddings:** `sentence-transformers` (`all-MiniLM-L6-v2`).
   * **Reranking:** `sentence-transformers` Cross-Encoder (`ms-marco-MiniLM-L-6-v2`).
   * **Text Processing:** `langchain-text-splitters`.
-* **Database:** ChromaDB (Local Vector Database).
+* **Database:** Qdrant (Local Vector Database).
 * **Package Managers:** `pip` (Python), `npm` (Node.js).
 
 ## 3. Architecture Analysis
@@ -26,7 +27,7 @@
 * **Major Modules:**
   * **Frontend Client (`frontend/`):** Manages user state, renders the chat UI, and communicates with the backend via REST.
   * **API Layer (`backend/main.py`):** Exposes endpoints (`/chat`, `/health`, `/admin/*`) and handles request validation, CORS, and caching.
-  * **RAG Engine (`backend/rag_pipeline.py`):** The core intelligence module. It processes queries, retrieves context from ChromaDB, reranks results, and constructs prompts for the LLM.
+  * **RAG Engine (`backend/rag_pipeline.py`):** The core intelligence module. It processes queries, retrieves context from Qdrant, reranks results, and constructs prompts for the LLM.
   * **Data Ingestion (`backend/scraper.py`):** An async crawler that populates the raw data folder (`data/srm_docs`).
 * **Component Interaction:**
   ```text
@@ -37,7 +38,7 @@
                                [ RAG Pipeline ] ---> (1. Preprocess & Embed)
                                         |
                                         v
-                                  [ ChromaDB ] ---> (2. Retrieve top N chunks)
+                                  [ Qdrant ] ---> (2. Retrieve top N chunks)
                                         |
                                         v
                                [ Cross-Encoder ] ---> (3. Rerank & filter top K chunks)
@@ -65,13 +66,13 @@
 
 ## 5. Data Flow & Logic
 1. **Ingestion:** `scraper.py` fetches HTML/PDFs, cleans the text, and saves it to `backend/data/srm_docs`.
-2. **Indexing:** `rag_pipeline.py` reads the scraped data, splits it into chunks (using Langchain), generates embeddings, and stores them in ChromaDB.
+2. **Indexing:** `rag_pipeline.py` reads the scraped data, splits it into chunks (using Langchain), generates embeddings, and stores them in Qdrant.
 3. **Query Processing:** 
    * A user submits a query via the React UI.
    * FastAPI receives the request. If the exact query exists in `cache.py`, it returns the cached response instantly.
    * If not cached, `rag_pipeline.py` expands abbreviations (e.g., "KTR" -> "Kattankulathur") and reformulates the query with synonyms.
 4. **Retrieval & Generation:**
-   * The pipeline queries ChromaDB for the top 25 chunks.
+   * The pipeline queries Qdrant for the top 25 chunks.
    * A Cross-Encoder reranks these chunks to find the 5 most relevant ones.
    * The chunks are bundled into a prompt and sent to the local Ollama API.
 5. **Response:** The LLM streams/returns the answer, which FastAPI packages with source URLs and sends back to the frontend for markdown rendering.
@@ -84,7 +85,7 @@
 
 ## 7. Database & Models
 * **Database Type:** Vector Database.
-* **Implementation:** **ChromaDB** (running in embedded/local mode, saving to `vector_db_path`).
+* **Implementation:** **Qdrant** (running in embedded/local mode, saving to `vector_db_path`).
 * **Schema/Entities:** 
   * Documents are stored as text chunks with associated metadata (e.g., `source_url`, `title`).
   * Pydantic models (`ChatRequest`, `ChatResponse`, `Source`) strictly define the API data contracts.
@@ -109,7 +110,7 @@
   * **Distributed Caching:** Replace the in-memory `cache.py` with Redis to support multi-worker scaling.
 * **Refactoring Areas:**
   * **Dynamic Configuration:** Move the hardcoded `ABBREVIATIONS` and `_QUERY_SYNONYMS` in `rag_pipeline.py` to an external JSON/YAML configuration file for easier updates.
-  * **Frontend Integration:** Update `ChatRequest` to accept the `campus` parameter, and modify the ChromaDB query in `rag_pipeline.py` to filter metadata by the selected campus.
+  * **Frontend Integration:** Update `ChatRequest` to accept the `campus` parameter, and modify the Qdrant query in `rag_pipeline.py` to filter metadata by the selected campus.
 * **Scalability, Security, and Performance:**
   * **Security:** Implement rate limiting (e.g., using `slowapi`) to prevent API abuse, especially since LLM generation is computationally expensive.
   * **Performance:** Implement streaming responses via WebSockets or Server-Sent Events (SSE) from FastAPI to the React frontend to improve perceived latency while the LLM generates tokens.

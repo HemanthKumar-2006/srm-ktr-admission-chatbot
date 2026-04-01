@@ -40,10 +40,58 @@ for r in rels:
         print(f'  {r["source_id"]} --[{r["relation_type"]}]--> {r["target_id"]}')
 
 print()
-print('=== COLLABORATES_WITH ===')
+print('=== INVALID HIGHER-ORDER COLLABORATION EDGES ===')
+higher_order_types = {'directorate', 'college', 'department'}
+invalid_collabs = []
 for r in rels:
-    if r['relation_type'] == 'collaborates_with':
-        print(f'  {r["source_id"]} --[collaborates_with]--> {r["target_id"]}')
+    if r['relation_type'] != 'collaborates_with':
+        continue
+    src_type = entities.get(r['source_id'], {}).get('entity_type')
+    tgt_type = entities.get(r['target_id'], {}).get('entity_type')
+    if src_type in higher_order_types or tgt_type in higher_order_types:
+        invalid_collabs.append((r['source_id'], src_type, r['target_id'], tgt_type))
+
+if not invalid_collabs:
+    print('  none')
+else:
+    for src_id, src_type, tgt_id, tgt_type in invalid_collabs:
+        print(f'  INVALID: {src_id} ({src_type}) --[collaborates_with]--> {tgt_id} ({tgt_type})')
+
+print()
+print('=== DERIVED HIGHER-ORDER COLLABORATION VIA SHARED LOWER-ORDER ENTITIES ===')
+lower_order_types = {'centre', 'program', 'misc'}
+shared_map = defaultdict(set)
+for eid, entity in entities.items():
+    if entity['entity_type'] not in lower_order_types:
+        continue
+
+    higher_order_parents = set()
+    for r in rels:
+        if r['relation_type'] in ('has_centre', 'offers_program') and r['target_id'] == eid:
+            src_type = entities.get(r['source_id'], {}).get('entity_type')
+            if src_type in higher_order_types:
+                higher_order_parents.add(r['source_id'])
+        elif r['relation_type'] == 'also_listed_under' and r['source_id'] == eid:
+            tgt_type = entities.get(r['target_id'], {}).get('entity_type')
+            if tgt_type in higher_order_types:
+                higher_order_parents.add(r['target_id'])
+
+    if len(higher_order_parents) < 2:
+        continue
+
+    ordered = sorted(higher_order_parents)
+    for i, left in enumerate(ordered):
+        for right in ordered[i + 1:]:
+            shared_map[(left, right)].add(eid)
+
+if not shared_map:
+    print('  none')
+else:
+    for (left, right), shared_children in sorted(shared_map.items()):
+        child_names = ', '.join(
+            entities[child_id]['name'] for child_id in sorted(shared_children)
+        )
+        print(f'  {left} <-> {right} via {child_names}')
 
 print()
 print('=== CENTRES TYPED AS DEPARTMENT ===')
@@ -52,16 +100,20 @@ for eid, e in entities.items():
         print(f'  {eid}: "{e["name"]}" type={e["entity_type"]}')
 
 print()
-print('=== DEPARTMENTS WITH MULTIPLE PARENTS ===')
-dept_parents = defaultdict(list)
+print('=== HAS_CENTRE / HAS_DEPARTMENT MULTI-PARENT TARGETS ===')
+target_parents = defaultdict(list)
 for r in rels:
     if r['relation_type'] in ('has_department', 'has_centre'):
-        dept_parents[r['target_id']].append((r['source_id'], r['relation_type']))
-for tid, parents in sorted(dept_parents.items()):
+        target_parents[r['target_id']].append((r['source_id'], r['relation_type']))
+multi_parent_found = False
+for tid, parents in sorted(target_parents.items()):
     if len(parents) > 1:
+        multi_parent_found = True
         print(f'MULTI-PARENT: {tid}')
         for src, rel in parents:
             print(f'  <- {src} ({rel})')
+if not multi_parent_found:
+    print('  none')
 
 print()
 print('=== PROGRAMS WITH MULTIPLE PARENTS ===')

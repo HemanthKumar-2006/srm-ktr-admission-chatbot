@@ -1,7 +1,7 @@
 # SRMIST Knowledge Graph — Construction Guideline
 
-> **Version:** 1.0  
-> **Last Updated:** 2026-03-31  
+> **Version:** 1.1  
+> **Last Updated:** 2026-04-01  
 > **Purpose:** Canonical reference for building, maintaining, and extending the SRMIST Knowledge Graph.
 
 This document is the **single source of truth** for the KG schema. Any automated builder,
@@ -45,7 +45,8 @@ Every entity must have exactly one `entity_type` from the table below.
 |---|---|---|---|
 | `university` | 🟣 | Top-level institution root. There is only **one** university node. | SRMIST |
 | `campus` | 🟠 | A physical campus of SRMIST. | Kattankulathur |
-| `college` | 🔴 | A Faculty / College / School at the top of a campus's academic structure. Despite some being called "School" (e.g., SRM School of Law), they still use the `college` type. | Faculty of Engineering & Technology |
+| `college` | 🔴 | A Faculty / College at the top of a campus's academic structure. Despite some being called "School" (e.g., SRM School of Law), they still use the `college` type. | Faculty of Engineering & Technology |
+| `school` | 🟥 | An intermediate grouping of departments *within* a college (e.g., under FET) | School of Computing |
 | `sub_college` | 🩷 | A college **within** the Medicine & Health Sciences college only. | College of Dentistry |
 | `department` | 🟢 | A Department or Centre-of-study under a college or sub-college. | Dept of Computer Science |
 | `centre` | 🩵 | A research or service centre. May be cross-linked to multiple parents (college + directorate). | CACR |
@@ -76,22 +77,24 @@ Every relationship must have a `relation_type` from this table.
 | `has_college` | campus → college | A campus has a college/faculty |
 | `has_sub_college` | college → sub_college | Medicine has sub-colleges |
 | `has_department` | college / sub_college / directorate → department | Has a department |
-| `has_centre` | college / directorate → centre | Has a research/service centre |
+| `has_centre` | college / department / directorate → centre | Has a research/service centre |
 | `has_directorate` | campus → directorate | Campus has an administrative directorate |
 | `has_facility` | campus → facility | Campus has a physical facility |
 | `offers_program` | department → program | Department offers a degree program |
 | `has_admission` | university / campus → admission | University/campus has an admission node |
 | `admission_governs` | admission → program | Admission portal governs a program's intake |
-| `collaborates_with` | directorate ↔ college / centre | Shared research or operational collaboration |
-| `also_listed_under` | facility / centre → directorate / section | Cross-listing when a node logically belongs to 2+ parents |
+| `collaborates_with` | centre / program / event / lab ↔ centre / program / event / lab | Collaboration only between lower-order entities |
+| `also_listed_under` | centre / facility / misc / publication → directorate / section / college / department | Cross-listing when a node is discoverable from multiple contexts but should keep one canonical home |
 | `belongs_to` | department / centre → college | Reverse of has_department / has_centre (for lookup) |
 
 ### Rules
 
-- Relationships are **directed**. The source is always the "parent" or "owner" unless noted (collaborates_with is bidirectional).
+- Relationships are **directed**. The source is always the "parent" or "owner" unless noted.
 - `also_listed_under` must **never** replace the primary `has_*` link. Always add both.
 - Do not create `has_department` from `university` or `campus` directly — always go through a `college`.
 - `admission_governs` links an `admission` node to specific `program` nodes (not to departments).
+- Do not create `collaborates_with` between `directorate`, `college`, or `department`.
+- If two higher-order entities are connected through a shared centre, lab, event, or program, that collaboration is **derived**, not stored as a direct edge.
 
 ---
 
@@ -102,12 +105,26 @@ SRMIST (university)
 ├── Kattankulathur (campus)
 │   ├── [Academics]
 │   │   ├── Faculty of Engineering & Technology (college)
-│   │   │   ├── 22 Departments (department)
-│   │   │   │   └── Programs (program)
-│   │   │   └── 17 Centres (centre)  ← some also cross-linked to Directorate of Research
+│   │   │   ├── School of Computing (school)
+│   │   │   │   └── 4 Departments (department)
+│   │   │   ├── School of Bio-Engineering (school)
+│   │   │   │   └── 5 Departments (department)
+│   │   │   ├── School of Electrical and Electronics Engineering (school)
+│   │   │   │   └── 3 Departments (department)
+│   │   │   ├── School of Mechanical Engineering (school)
+│   │   │   │   └── 4 Departments (department)
+│   │   │   ├── School of Civil Engineering (school)
+│   │   │   │   └── 1 Department (department)
+│   │   │   ├── School of Architecture & Interior Design (school & department)
+│   │   │   ├── School of Basic Sciences (school)
+│   │   │   │   └── 4 Departments (department)
+│   │   │   └── 17 Centres (centre)
+│   │   │       ├── CDC-CET (career development centre) ← also linked to Directorate of Career Centre
+│   │   │       ├── Dept-level centres (e.g., Centre for AI under Comp Intel)
+│   │   │       └── Research Centres
 │   │   ├── Faculty of Science & Humanities (college)
 │   │   │   ├── 22 Departments (department)
-│   │   │   └── 1 Centre (centre)
+│   │   │   └── CDC-CSH (centre) ← also linked to Directorate of Career Centre
 │   │   ├── Medicine & Health Sciences (college)
 │   │   │   ├── College of Medicine (sub_college)
 │   │   │   ├── College of Dentistry (sub_college)
@@ -132,7 +149,8 @@ SRMIST (university)
 │   │   ├── Directorate of Alumni Affairs (directorate)
 │   │   ├── Directorate of Communications (directorate)
 │   │   ├── Directorate of Career Centre (directorate)
-│   │   │   └── Career Development Centres (centre) ← also in departments
+│   │   │   ├── CDC-CET (centre) ← co-linked to FET
+│   │   │   └── CDC-CSH (centre) ← co-linked to CSH
 │   │   ├── ITKM (directorate)
 │   │   ├── Directorate of Learning and Development (directorate)
 │   │   ├── Directorate of Campus Administration & Facilities (directorate)
@@ -141,16 +159,9 @@ SRMIST (university)
 │   │
 │   ├── [Facilities]
 │   │   ├── Housing (facility)  ← also_listed_under Campus Life
-│   │   │   ├── Boys Hostel
-│   │   │   ├── Girls Hostel
-│   │   │   └── International Hostel  ← also_listed_under International Students
 │   │   ├── Transport (facility)  ← also_listed_under Campus Life
 │   │   ├── SRM Hotels (facility)
 │   │   └── Library (facility)
-│   │
-│   ├── [Admissions]
-│   │   ├── Admissions — India (admission)
-│   │   └── Admissions — International (admission)
 │   │
 │   └── [Misc]
 │       ├── Publications (publication)
@@ -160,6 +171,10 @@ SRMIST (university)
 │       ├── Careers at SRM (misc)
 │       ├── About SRMIST (misc)
 │       └── Contact (misc)
+│
+├── [Admissions]
+│   ├── Admissions — India (admission)
+│   └── Admissions — International (admission)
 │
 ├── Ramapuram (campus)
 │   └── [similar structure, populate from scrape]
@@ -215,6 +230,7 @@ The following data is defined as constants in `knowledge_graph.py` under `SEED_*
 7. Admission nodes + `has_admission` links
 8. Cross-links (`also_listed_under`)
 9. Misc nodes
+10. Rule-based overrides for structurally inconsistent sections such as Directorate of Research
 
 > ⚠️ When adding a new college, department, or directorate that is **known** to always exist, add it to the seed constants first, then verify it also comes through scraping.
 
@@ -243,6 +259,7 @@ The scraper populates:
 - Medicine sub-colleges
 - Core directorates
 - Naming conventions
+- Canonical ownership rules for Directorate of Research centres
 
 ---
 
@@ -258,6 +275,20 @@ Cross-links use the `also_listed_under` relation type. They are always **in addi
 | Research Centres in colleges | college (via `has_centre`) | Directorate of Research |
 | Career Development Centres in depts | department (via `has_centre`) | Directorate of Career Centre |
 | Controller of Examinations | campus (via `has_directorate`) | Admissions — India node |
+
+### Directorate of Research Override
+
+The SRMIST website mixes Research content across `/research/`, `/department/`, event pages, and college pages. To keep rebuilds stable:
+
+- The following are treated as the **core centres associated with Directorate of Research**:
+  - IIISM, REACH, NRC, CACR, SRM-DBT Platform, Medical Research Centre (aMRC), Centre for Statistics, EQRC/ERC, HPCC, SCIF
+- If one of the above centres is explicitly listed under a college or department, that academic unit should be the **primary** parent via `has_centre`.
+- In that case, Directorate of Research must become the **secondary** parent via `also_listed_under`.
+- If a centre appears only in Research context and no academic owner is known, Directorate of Research may remain the primary `has_centre` parent.
+- Add `also_listed_under` for every additional surfaced context that matters beyond the primary owner.
+- Do not add direct `collaborates_with` edges from Directorate of Research to colleges or departments. Any such relationship must be inferred from shared lower-order entities.
+- Research governance and archive pages such as R&D Cell, University Research Council, Projects, Sponsored Projects, SERI, Publications, Patents, Ph.D Awarded, and DPRC must map to stable canonical entities even if their URLs are not under `/directorate/`.
+- DPRC should also be cross-linked to the general Events / News context.
 
 > **Rule:** Never remove the primary `has_*` relation when adding an `also_listed_under`. Both must coexist.
 
@@ -281,7 +312,25 @@ Cross-links use the `also_listed_under` relation type. They are always **in addi
 ### Adding a New Directorate
 1. Add it to `SEED_KTR_DIRECTORATES`.
 2. Add a `has_directorate` link from the KTR campus seed.
-3. If the directorate cross-links to colleges or centres, add the `collaborates_with` or `also_listed_under` entry to `SEED_CROSS_LINKS`.
+3. If the directorate is surfaced from another page context, use `also_listed_under` where needed.
+4. Do not add direct `collaborates_with` links from a directorate to a college or department.
+
+### Adding or Reclassifying a Research Centre
+1. If it is one of the institution-level research wings/centres, add it to the Research override list in `knowledge_graph.py`.
+2. If the centre is explicitly owned by a college or department on the site, keep that academic parent as the primary `has_centre` owner.
+3. Add Directorate of Research as `also_listed_under` for the same centre.
+4. Add slug aliases if the site uses abbreviations, alternate spellings, or department-style URLs.
+
+### Modeling Collaboration
+1. Use `collaborates_with` only between lower-order entities such as centres, labs, events, and programs.
+2. Never add `collaborates_with` directly between `directorate`, `college`, or `department`.
+3. Represent higher-order collaboration by linking both higher-order entities to the same lower-order node.
+4. Any higher-order collaboration report should be derived from shared lower-order nodes, not persisted in the KG.
+
+### Adding a Research Section Page
+1. Map the page to a stable canonical node in the Research override rules.
+2. Use the closest existing entity type (`misc` or `publication`) rather than inventing a duplicate node from each URL variant.
+3. Attach it to Directorate of Research via `also_listed_under`.
 
 ### Updating HOD / Dean names
 - These come from scraped content. Re-run ingestion — the scraper will pick up the updated name from the page.
