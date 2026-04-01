@@ -11,7 +11,8 @@ Schema (entity_type):
 Relationships (relation_type):
     has_campus | has_college | has_sub_college | has_department | has_centre |
     has_directorate | has_facility | offers_program | has_admission |
-    admission_governs | collaborates_with | also_listed_under | belongs_to
+    has_admission_child | admission_covers | admission_governs |
+    collaborates_with | also_listed_under | belongs_to
 
 See KG_GUIDELINE.md at the project root for the full schema definition,
 naming conventions, and update rules.
@@ -25,6 +26,8 @@ import re
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Optional
+
+from backend.admission_profiles import integrate_admissions
 
 log = logging.getLogger("srm_chatbot.kg")
 
@@ -138,19 +141,39 @@ _COLLEGE_URL_SLUG_TO_SEED: dict[str, str] = {
 SEED_MEDICINE_SUB_COLLEGES = [
     {
         "id": "sub_college--college-of-medicine",
-        "name": "SRM Medical College Hospital & Research Centre",
+        "name": "SRM Medical College Hospital and Research Centre (SRM MCHRC)",
         "url": "https://medical.srmist.edu.in/",
     },
     {
         "id": "sub_college--college-of-dentistry",
-        "name": "SRM Kattankulathur Dental College and Hospital",
+        "name": "SRM Kattankulathur Dental College",
         "url": "https://dental.srmist.edu.in/",
     },
-    {"id": "sub_college--college-of-pharmacy",             "name": "College of Pharmacy"},
-    {"id": "sub_college--college-of-physiotherapy",        "name": "College of Physiotherapy"},
-    {"id": "sub_college--college-of-occupational-therapy", "name": "College of Occupational Therapy"},
-    {"id": "sub_college--college-of-nursing",              "name": "College of Nursing"},
-    {"id": "sub_college--school-of-public-health",         "name": "School of Public Health"},
+    {
+        "id": "sub_college--college-of-pharmacy",
+        "name": "College of Pharmacy",
+        "url": "https://www.srmist.edu.in/department/college-of-pharmacy/",
+    },
+    {
+        "id": "sub_college--college-of-physiotherapy",
+        "name": "College of Physiotherapy",
+        "url": "https://www.srmist.edu.in/department/college-of-physiotherapy/",
+    },
+    {
+        "id": "sub_college--college-of-occupational-therapy",
+        "name": "College of Occupational Therapy",
+        "url": "https://www.srmist.edu.in/department/college-of-occupational-therapy/",
+    },
+    {
+        "id": "sub_college--college-of-nursing",
+        "name": "College of Nursing",
+        "url": "https://www.srmist.edu.in/department/college-of-nursing/",
+    },
+    {
+        "id": "sub_college--school-of-public-health",
+        "name": "School of Public Health",
+        "url": "https://www.srmist.edu.in/srm-school-of-public-health/",
+    },
 ]
 
 # Departments under Medicine & Health Sciences. The medical and dental sites
@@ -624,6 +647,249 @@ SEED_MEDICINE_DEPARTMENTS += [
     },
 ]
 
+# Only Medicine, Dentistry, and Pharmacy maintain true department lists under
+# Medicine & Health Sciences. The remaining sub-colleges are modeled as
+# college-cum-department units, so their programs and centres attach directly
+# to the sub_college node rather than to synthetic child departments.
+_COLLAPSED_MEDICINE_SUB_COLLEGE_DEPARTMENT_IDS = {
+    "department--physiotherapy-orthopaedics",
+    "department--physiotherapy-neurology",
+    "department--physiotherapy-cardio-pulmonary-sciences",
+    "department--physiotherapy-sports-physiotherapy",
+    "department--physiotherapy-paediatrics",
+    "department--nursing-medical-surgical-nursing",
+    "department--nursing-community-health-nursing",
+    "department--nursing-obstetrics-and-gynaecology-nursing",
+    "department--nursing-paediatric-nursing",
+    "department--nursing-psychiatric-nursing",
+    "department--occupational-therapy-neurosciences",
+    "department--occupational-therapy-paediatrics",
+    "department--occupational-therapy-hand-rehabilitation",
+    "department--occupational-therapy-mental-health",
+    "department--occupational-therapy-sensory-integration",
+    "department--public-health-general",
+    "department--public-health-biostatistics-and-epidemiology",
+    "department--public-health-health-data-science",
+}
+_REPLACED_MEDICINE_DEPARTMENT_IDS = {
+    "department--medical-anaesthesiology",
+    "department--medical-radiology",
+    "department--medical-cardiovascular-and-thoracic-surgery",
+    "department--medical-endocrinology",
+    "department--medical-surgical-oncology",
+    "department--medical-vascular-surgery",
+    "department--allied-health-sciences",
+    "department--allied-health-optometry",
+    "department--allied-health-clinical-psychology",
+    "department--allied-health-audiology-and-speech-language-pathology",
+    "department--allied-health-clinical-nutrition-and-dietetics",
+}
+SEED_MEDICINE_DEPARTMENTS = [
+    dept for dept in SEED_MEDICINE_DEPARTMENTS
+    if dept["id"] not in _COLLAPSED_MEDICINE_SUB_COLLEGE_DEPARTMENT_IDS
+    and dept["id"] not in _REPLACED_MEDICINE_DEPARTMENT_IDS
+]
+
+SEED_MEDICINE_DEPARTMENTS += [
+    {
+        "id": "department--medical-anaesthesia",
+        "name": "Anaesthesia",
+        "parent_id": "sub_college--college-of-medicine",
+        "url": "https://medical.srmist.edu.in/departments/anaesthesia/",
+        "attributes": {"category": "clinical"},
+    },
+    {
+        "id": "department--medical-radio-diagnosis",
+        "name": "Radio Diagnosis",
+        "parent_id": "sub_college--college-of-medicine",
+        "url": "https://medical.srmist.edu.in/departments/radio-diagnosis/",
+        "attributes": {"category": "clinical"},
+    },
+    {
+        "id": "department--medical-physical-medicine-and-rehabilitation",
+        "name": "Physical Medicine and Rehabilitation",
+        "parent_id": "sub_college--college-of-medicine",
+        "url": "https://medical.srmist.edu.in/departments/physical-medicine-and-rehabilitation/",
+        "attributes": {"category": "clinical"},
+    },
+    {
+        "id": "department--medical-eye-bank",
+        "name": "Eye Bank",
+        "parent_id": "sub_college--college-of-medicine",
+        "url": "https://medical.srmist.edu.in/departments/eye-bank/",
+        "attributes": {"category": "clinical"},
+    },
+    {
+        "id": "department--medical-cardiovascular-and-thoracic-surgery",
+        "name": "Cardio Vascular & Thoracic Surgery",
+        "parent_id": "sub_college--college-of-medicine",
+        "url": "https://medical.srmist.edu.in/departments/cardio-thoracic-vascular-surgery/",
+        "attributes": {"category": "super-speciality"},
+    },
+    {
+        "id": "department--medical-neonatology",
+        "name": "Neonatology",
+        "parent_id": "sub_college--college-of-medicine",
+        "url": "https://medical.srmist.edu.in/departments/neonatology/",
+        "attributes": {"category": "super-speciality"},
+    },
+    {
+        "id": "department--allied-health-optometry",
+        "name": "Optometry",
+        "parent_id": "sub_college--college-of-medicine",
+        "url": "https://medical.srmist.edu.in/departments/optometry/",
+        "attributes": {"category": "allied-health"},
+    },
+    {
+        "id": "department--allied-health-clinical-psychology",
+        "name": "Clinical Psychology",
+        "parent_id": "sub_college--college-of-medicine",
+        "url": "https://medical.srmist.edu.in/departments/clinical-psychology/",
+        "attributes": {"category": "allied-health"},
+    },
+    {
+        "id": "department--allied-health-audiology-and-speech-language-pathology",
+        "name": "Audiology and Speech-Language Pathology",
+        "parent_id": "sub_college--college-of-medicine",
+        "url": "https://medical.srmist.edu.in/departments/audiology-and-speech-language-pathology/",
+        "attributes": {"category": "allied-health"},
+    },
+    {
+        "id": "department--allied-health-clinical-nutrition-and-dietetics",
+        "name": "Clinical Nutrition and Dietetics",
+        "parent_id": "sub_college--college-of-medicine",
+        "url": "https://medical.srmist.edu.in/departments/clinical-nutrition-and-dietetics/",
+        "attributes": {"category": "allied-health"},
+    },
+    {
+        "id": "department--allied-health-medical-laboratory-technology",
+        "name": "Medical Laboratory Technology",
+        "parent_id": "sub_college--college-of-medicine",
+        "attributes": {"category": "allied-health"},
+    },
+    {
+        "id": "department--allied-health-neuro-sciences-technology",
+        "name": "Neuro Sciences Technology",
+        "parent_id": "sub_college--college-of-medicine",
+        "attributes": {"category": "allied-health"},
+    },
+    {
+        "id": "department--medical-simulation",
+        "name": "Medical Simulation",
+        "parent_id": "sub_college--college-of-medicine",
+        "url": "https://medical.srmist.edu.in/medical-simulation/",
+        "attributes": {"category": "medical-simulation"},
+    },
+    {
+        "id": "department--medical-education",
+        "name": "Medical Education Department",
+        "parent_id": "sub_college--college-of-medicine",
+        "url": "https://medical.srmist.edu.in/medical-education-department/",
+        "attributes": {"category": "medical-education"},
+    },
+    {
+        "id": "department--dental-anatomy",
+        "name": "Anatomy",
+        "parent_id": "sub_college--college-of-dentistry",
+        "url": "https://dental.srmist.edu.in/basic-medical-science-departments/",
+    },
+    {
+        "id": "department--dental-physiology",
+        "name": "Physiology",
+        "parent_id": "sub_college--college-of-dentistry",
+        "url": "https://dental.srmist.edu.in/basic-medical-science-departments/",
+    },
+    {
+        "id": "department--dental-biochemistry",
+        "name": "Biochemistry",
+        "parent_id": "sub_college--college-of-dentistry",
+        "url": "https://dental.srmist.edu.in/basic-medical-science-departments/",
+    },
+    {
+        "id": "department--dental-pharmacology",
+        "name": "Pharmacology",
+        "parent_id": "sub_college--college-of-dentistry",
+        "url": "https://dental.srmist.edu.in/basic-medical-science-departments/",
+    },
+    {
+        "id": "department--dental-microbiology",
+        "name": "Microbiology",
+        "parent_id": "sub_college--college-of-dentistry",
+        "url": "https://dental.srmist.edu.in/basic-medical-science-departments/",
+    },
+    {
+        "id": "department--dental-pathology",
+        "name": "Pathology",
+        "parent_id": "sub_college--college-of-dentistry",
+        "url": "https://dental.srmist.edu.in/basic-medical-science-departments/",
+    },
+    {
+        "id": "department--dental-general-medicine",
+        "name": "General Medicine",
+        "parent_id": "sub_college--college-of-dentistry",
+        "url": "https://dental.srmist.edu.in/basic-medical-science-departments/",
+    },
+    {
+        "id": "department--dental-general-surgery",
+        "name": "General Surgery",
+        "parent_id": "sub_college--college-of-dentistry",
+        "url": "https://dental.srmist.edu.in/basic-medical-science-departments/",
+    },
+    {
+        "id": "department--dental-research",
+        "name": "Research",
+        "parent_id": "sub_college--college-of-dentistry",
+        "url": "https://dental.srmist.edu.in/dental-departments/",
+    },
+    {
+        "id": "department--pharmacy-pharmaceutical-regulatory-affairs",
+        "name": "Pharmaceutical Regulatory Affairs",
+        "parent_id": "sub_college--college-of-pharmacy",
+    },
+    {
+        "id": "department--pharmacy-pharmaceutical-quality-assurance",
+        "name": "Pharmaceutical Quality Assurance",
+        "parent_id": "sub_college--college-of-pharmacy",
+    },
+    {
+        "id": "department--pharmacy-pharmacy-research",
+        "name": "Pharmacy Research",
+        "parent_id": "sub_college--college-of-pharmacy",
+    },
+]
+
+_MEDICINE_TYPE_BY_CATEGORY = {
+    "pre-and-para-clinical": "pre-and-para-clinical",
+    "clinical": "clinical",
+    "super-speciality": "super-speciality",
+    "allied-health": "allied-health-science",
+    "medical-simulation": "medical-simulation",
+    "medical-education": "medical-education",
+}
+_DENTAL_BASIC_SCIENCE_IDS = {
+    "department--dental-anatomy",
+    "department--dental-physiology",
+    "department--dental-biochemistry",
+    "department--dental-pharmacology",
+    "department--dental-microbiology",
+    "department--dental-pathology",
+    "department--dental-general-medicine",
+    "department--dental-general-surgery",
+}
+for _dept in SEED_MEDICINE_DEPARTMENTS:
+    _attrs = _dept.setdefault("attributes", {})
+    _category = _attrs.get("category")
+    if _dept["id"].startswith("department--medical-") or _dept["id"].startswith("department--allied-health-"):
+        _type = _MEDICINE_TYPE_BY_CATEGORY.get(_category)
+        if _type:
+            _attrs["type"] = _type
+        if _attrs.get("category") == _attrs.get("type"):
+            _attrs.pop("category", None)
+    elif _dept["id"] in _DENTAL_BASIC_SCIENCE_IDS:
+        _attrs["type"] = "basic-medical-science"
+    elif _dept["id"].startswith("department--dental-"):
+        _attrs["type"] = "dental"
+
 PROGRAM_PARENT_OVERRIDES: dict[str, str] = {
     "program--b-sc-biomedical-science": "department--department-of-biochemistry",
     "program--mbbs-bachelor-of-medicine-and-bachelor-of-surgery": "sub_college--college-of-medicine",
@@ -649,8 +915,8 @@ PROGRAM_PARENT_OVERRIDES: dict[str, str] = {
     "program--m-s-otorhinolaryngology-ent": "department--medical-ent",
     "program--m-s-ophthalmology": "department--medical-ophthalmology",
     "program--m-s-obstetrics-and-gynaecology": "department--medical-obstetrics-and-gynaecology",
-    "program--m-d-anaesthesiology": "department--medical-anaesthesiology",
-    "program--m-d-radio-diagnosis": "department--medical-radiology",
+    "program--m-d-anaesthesiology": "department--medical-anaesthesia",
+    "program--m-d-radio-diagnosis": "department--medical-radio-diagnosis",
     "program--md-emergency-medicine": "department--medical-emergency-medicine",
     "program--fellowship-emergency-medicine": "department--medical-emergency-medicine",
     "program--m-d-immuno-haematology-blood-transfusion": "department--medical-transfusion-medicine",
@@ -672,17 +938,17 @@ PROGRAM_PARENT_OVERRIDES: dict[str, str] = {
     "program--m-sc-critical-care-technology": "department--medical-critical-care-medicine",
     "program--m-sc-nurse-practitioner-in-critical-care-npcc": "department--medical-critical-care-medicine",
     "program--b-sc-accident-and-emergency-care-technology": "department--medical-emergency-medicine",
-    "program--b-sc-neuro-sciences-technology": "department--allied-health-sciences",
-    "program--m-sc-neuroscience-technology": "department--allied-health-sciences",
+    "program--b-sc-neuro-sciences-technology": "department--allied-health-neuro-sciences-technology",
+    "program--m-sc-neuroscience-technology": "department--allied-health-neuro-sciences-technology",
     "program--b-sc-renal-dialysis-technology": "department--medical-nephrology",
     "program--m-sc-renal-science-and-dialysis-technology": "department--medical-nephrology",
-    "program--b-sc-medical-imaging-technology": "department--medical-radiology",
-    "program--m-sc-medical-imaging-technology": "department--medical-radiology",
-    "program--b-sc-medical-laboratory-technology": "department--allied-health-sciences",
-    "program--m-sc-medical-laboratory-technology": "department--allied-health-sciences",
+    "program--b-sc-medical-imaging-technology": "department--medical-radio-diagnosis",
+    "program--m-sc-medical-imaging-technology": "department--medical-radio-diagnosis",
+    "program--b-sc-medical-laboratory-technology": "department--allied-health-medical-laboratory-technology",
+    "program--m-sc-medical-laboratory-technology": "department--allied-health-medical-laboratory-technology",
     "program--b-sc-respiratory-therapy": "department--medical-respiratory-medicine",
     "program--m-sc-respiratory-therapy": "department--medical-respiratory-medicine",
-    "program--m-sc-clinical-research": "department--allied-health-sciences",
+    "program--m-sc-clinical-research": "sub_college--college-of-medicine",
     "program--best-m-sc-biochemistry-colleges-chennai": "department--department-of-biochemistry",
     "program--ph-d-in-biochemistry": "department--department-of-biochemistry",
 }
@@ -708,7 +974,7 @@ PROGRAM_PARENT_OVERRIDES.update({
     "program--m-d-s-public-health-dentistry": "department--dental-public-health-dentistry",
     "program--m-d-s-oral-medicine-radiology": "department--dental-oral-medicine-and-radiology",
     "program--b-pharm-pharmacy": "sub_college--college-of-pharmacy",
-    "program--ph-d-in-pharmacy": "sub_college--college-of-pharmacy",
+    "program--ph-d-in-pharmacy": "department--pharmacy-pharmacy-research",
     "program--m-pharm-pharmaceutics": "department--pharmacy-pharmaceutics",
     "program--m-pharm-pharmaceutical-analysis": "department--pharmacy-pharmaceutical-analysis",
     "program--m-pharm-pharmaceutical-chemistry": "department--pharmacy-pharmaceutical-chemistry",
@@ -717,32 +983,32 @@ PROGRAM_PARENT_OVERRIDES.update({
     "program--m-pharm-pharmacy-practice": "department--pharmacy-pharmacy-practice",
     "program--pharmd-doctor-of-pharmacy": "department--pharmacy-pharmacy-practice",
     "program--pharm-d": "department--pharmacy-pharmacy-practice",
-    "program--m-pharm-pharmaceutical-quality-assurance": "sub_college--college-of-pharmacy",
-    "program--m-pharm-pharmaceutical-regulatory-affairs": "sub_college--college-of-pharmacy",
+    "program--m-pharm-pharmaceutical-quality-assurance": "department--pharmacy-pharmaceutical-quality-assurance",
+    "program--m-pharm-pharmaceutical-regulatory-affairs": "department--pharmacy-pharmaceutical-regulatory-affairs",
     "program--b-p-t-bachelor-of-physiotherapy": "sub_college--college-of-physiotherapy",
     "program--ph-d-physiotherapy": "sub_college--college-of-physiotherapy",
-    "program--m-p-t-neurology": "department--physiotherapy-neurology",
-    "program--m-p-t-sports-physiotherapy": "department--physiotherapy-sports-physiotherapy",
+    "program--m-p-t-neurology": "sub_college--college-of-physiotherapy",
+    "program--m-p-t-sports-physiotherapy": "sub_college--college-of-physiotherapy",
     "program--b-sc-nursing": "sub_college--college-of-nursing",
     "program--pbb-sc-nursing": "sub_college--college-of-nursing",
     "program--diploma-in-nursing-dgnm": "sub_college--college-of-nursing",
-    "program--m-sc-medical-surgical-nursing": "department--nursing-medical-surgical-nursing",
-    "program--m-sc-community-health-nursing": "department--nursing-community-health-nursing",
-    "program--m-sc-obstertrics-and-gynaecology-nursing": "department--nursing-obstetrics-and-gynaecology-nursing",
-    "program--m-sc-paediatric-nursing": "department--nursing-paediatric-nursing",
-    "program--m-sc-psychiatric-nursing": "department--nursing-psychiatric-nursing",
-    "program--post-basic-diploma-critical-care-nursing": "department--nursing-medical-surgical-nursing",
-    "program--post-basic-diploma-operation-room-nursing": "department--nursing-medical-surgical-nursing",
-    "program--post-basic-diploma-emergency-and-disaster-nursing": "department--nursing-community-health-nursing",
+    "program--m-sc-medical-surgical-nursing": "sub_college--college-of-nursing",
+    "program--m-sc-community-health-nursing": "sub_college--college-of-nursing",
+    "program--m-sc-obstertrics-and-gynaecology-nursing": "sub_college--college-of-nursing",
+    "program--m-sc-paediatric-nursing": "sub_college--college-of-nursing",
+    "program--m-sc-psychiatric-nursing": "sub_college--college-of-nursing",
+    "program--post-basic-diploma-critical-care-nursing": "sub_college--college-of-nursing",
+    "program--post-basic-diploma-operation-room-nursing": "sub_college--college-of-nursing",
+    "program--post-basic-diploma-emergency-and-disaster-nursing": "sub_college--college-of-nursing",
     "program--bachelor-of-occupational-therapy": "sub_college--college-of-occupational-therapy",
     "program--ph-d-occupational-therapy": "sub_college--college-of-occupational-therapy",
-    "program--m-o-t-neurosciences": "department--occupational-therapy-neurosciences",
-    "program--integrated-master-of-public-health": "department--public-health-general",
-    "program--master-of-public-health-mph": "department--public-health-general",
-    "program--mph-applied-health-research": "department--public-health-general",
-    "program--ph-d-public-health": "department--public-health-general",
-    "program--msc-biostatistics-and-epidemiology": "department--public-health-biostatistics-and-epidemiology",
-    "program--m-sc-health-data-science": "department--public-health-health-data-science",
+    "program--m-o-t-neurosciences": "sub_college--college-of-occupational-therapy",
+    "program--integrated-master-of-public-health": "sub_college--school-of-public-health",
+    "program--master-of-public-health-mph": "sub_college--school-of-public-health",
+    "program--mph-applied-health-research": "sub_college--school-of-public-health",
+    "program--ph-d-public-health": "sub_college--school-of-public-health",
+    "program--msc-biostatistics-and-epidemiology": "sub_college--school-of-public-health",
+    "program--m-sc-health-data-science": "sub_college--school-of-public-health",
     "program--best-b-com-information-system-and-management-chennai": "department--department-of-corporate-secretaryship-and-accounting-finance",
     "program--b-com-w-s-business-analytics": "department--department-of-corporate-secretaryship-and-accounting-finance",
     "program--b-tech-ece-with-specialization-in-cyber-physical-systems": "department--department-of-electronics-communication",
@@ -770,34 +1036,24 @@ SEED_ADDITIONAL_DEPARTMENTS = [
         "name": "Management",
         "parent_id": "college--faculty-of-management",
     },
-    {
-        "id": "department--physiotherapy-community-rehabilitation-sciences",
-        "name": "Community Rehabilitation Sciences",
-        "parent_id": "sub_college--college-of-physiotherapy",
-    },
-    {
-        "id": "department--physiotherapy-obstetrics-and-gynaecology-sciences",
-        "name": "Obstetrics and Gynaecology Sciences",
-        "parent_id": "sub_college--college-of-physiotherapy",
-    },
 ]
 
 PROGRAM_PARENT_PATTERNS: list[tuple[str, str]] = [
     (r"associate fellow of industrial health|afih", "department--medical-community-medicine"),
-    (r"hospital administration", "department--public-health-general"),
+    (r"hospital administration", "sub_college--school-of-public-health"),
     (r"reproductive medicine|clinical embryology", "department--medical-obstetrics-and-gynaecology"),
     (r"cardiac care|cardiovascular sciences", "department--medical-cardiology"),
-    (r"anaesthesia|operation theatre", "department--medical-anaesthesiology"),
-    (r"physician associate|advance care paramedics", "department--allied-health-sciences"),
-    (r"m\.o\.t.*hand", "department--occupational-therapy-hand-rehabilitation"),
-    (r"m\.o\.t.*mental", "department--occupational-therapy-mental-health"),
-    (r"m\.o\.t.*orthopaedics", "department--occupational-therapy-hand-rehabilitation"),
-    (r"m\.o\.t.*paediatrics|m\.o\.t.*pediatrics", "department--occupational-therapy-paediatrics"),
-    (r"m\.p\.t.*community", "department--physiotherapy-community-rehabilitation-sciences"),
-    (r"m\.p\.t.*cardio", "department--physiotherapy-cardio-pulmonary-sciences"),
-    (r"m\.p\.t.*obstetrics", "department--physiotherapy-obstetrics-and-gynaecology-sciences"),
-    (r"m\.p\.t.*musculoskeletal|m\.p\.t.*orthopaedics", "department--physiotherapy-orthopaedics"),
-    (r"m\.p\.t.*pediatric|m\.p\.t.*paediatric", "department--physiotherapy-paediatrics"),
+    (r"anaesthesia|operation theatre", "department--medical-anaesthesia"),
+    (r"physician associate|advance care paramedics", "sub_college--college-of-medicine"),
+    (r"m\.o\.t.*hand", "sub_college--college-of-occupational-therapy"),
+    (r"m\.o\.t.*mental", "sub_college--college-of-occupational-therapy"),
+    (r"m\.o\.t.*orthopaedics", "sub_college--college-of-occupational-therapy"),
+    (r"m\.o\.t.*paediatrics|m\.o\.t.*pediatrics", "sub_college--college-of-occupational-therapy"),
+    (r"m\.p\.t.*community", "sub_college--college-of-physiotherapy"),
+    (r"m\.p\.t.*cardio", "sub_college--college-of-physiotherapy"),
+    (r"m\.p\.t.*obstetrics", "sub_college--college-of-physiotherapy"),
+    (r"m\.p\.t.*musculoskeletal|m\.p\.t.*orthopaedics", "sub_college--college-of-physiotherapy"),
+    (r"m\.p\.t.*pediatric|m\.p\.t.*paediatric", "sub_college--college-of-physiotherapy"),
     (r"b\.b\.a\.,ll\.b|ll\.b|ll\.m|legum|criminal law", "department--department-of-law"),
     (r"\bb\.ed\.", "department--school-of-education"),
     (r"journalism|mass communication", "department--department-of-journalism-and-mass-communication"),
@@ -866,7 +1122,7 @@ CENTRE_PARENT_OVERRIDES: dict[str, str] = {
     "centre--advance-multilingual-computing": "department--department-of-computational-intelligence",
     "centre--agricultural-microbiology-and-environmental-science": "department--department-of-agronomy",
     "centre--ai-dl-lab-based-on-nvidia-dgx-a100": "department--department-of-computational-intelligence",
-    "centre--biomechanics-lab": "department--physiotherapy-orthopaedics",
+    "centre--biomechanics-lab": "sub_college--college-of-physiotherapy",
     "centre--block-chain-technology-lab-with-ids-inc": "department--department-of-computer-science-and-engineering",
     "centre--center-for-acces": "sub_college--college-of-occupational-therapy",
     "centre--centre-for-computational-sustainability": "department--department-of-computational-intelligence",
@@ -877,8 +1133,8 @@ CENTRE_PARENT_OVERRIDES: dict[str, str] = {
     "centre--cyber-resilience-and-asset-intelligence-lab": "department--department-of-networking-and-communications",
     "centre--dst-fist": "directorate--directorate-of-research",
     "centre--dst-serb-funded-durability-studies-laboratory": "department--department-of-civil-engineering",
-    "centre--electro-therapy-lab": "department--physiotherapy-orthopaedics",
-    "centre--exercise-therapy-lab": "department--physiotherapy-orthopaedics",
+    "centre--electro-therapy-lab": "sub_college--college-of-physiotherapy",
+    "centre--exercise-therapy-lab": "sub_college--college-of-physiotherapy",
     "centre--facilities-for-differently-abled-divyangjan-barrier-free-environment": "sub_college--college-of-occupational-therapy",
     "centre--functional-and-biomaterials-engineering-lab": "department--department-of-biomedical-engineering",
     "centre--hardware-trouble-shooting-lab": "department--department-of-networking-and-communications",
@@ -888,7 +1144,7 @@ CENTRE_PARENT_OVERRIDES: dict[str, str] = {
     "centre--mtech-phd-research-lab": "directorate--directorate-of-research",
     "centre--nuclear-thermo-hydraulics-lab": "department--department-of-mechanical-engineering",
     "centre--nutrition-lab": "department--allied-health-clinical-nutrition-and-dietetics",
-    "centre--orthopedic-lab": "department--physiotherapy-orthopaedics",
+    "centre--orthopedic-lab": "sub_college--college-of-physiotherapy",
     "centre--post-graduate-research-lab": "directorate--directorate-of-research",
     "centre--radiation-measurement-lab": "department--department-of-physics-and-nanotechnology",
     "centre--research-and-development": "directorate--directorate-of-research",
@@ -899,27 +1155,27 @@ CENTRE_PARENT_OVERRIDES: dict[str, str] = {
 }
 
 CENTRE_URL_PARENT_OVERRIDES: dict[str, str] = {
-    "school-of-public-health": "department--public-health-general",
+    "school-of-public-health": "sub_college--school-of-public-health",
     "college-of-nursing": "sub_college--college-of-nursing",
     "college-of-occupational-therapy": "sub_college--college-of-occupational-therapy",
 }
 
 CENTRE_PARENT_PATTERNS: list[tuple[str, str]] = [
-    (r"community health nursing", "department--nursing-community-health-nursing"),
-    (r"medical surgical nursing", "department--nursing-medical-surgical-nursing"),
-    (r"obstetrics|gynecolog|gynaecolog", "department--nursing-obstetrics-and-gynaecology-nursing"),
-    (r"paediatric nursing", "department--nursing-paediatric-nursing"),
-    (r"psychiatric nursing", "department--nursing-psychiatric-nursing"),
+    (r"community health nursing", "sub_college--college-of-nursing"),
+    (r"medical surgical nursing", "sub_college--college-of-nursing"),
+    (r"obstetrics|gynecolog|gynaecolog", "sub_college--college-of-nursing"),
+    (r"paediatric nursing", "sub_college--college-of-nursing"),
+    (r"psychiatric nursing", "sub_college--college-of-nursing"),
     (r"fundamentals of nursing|computer lab nursing", "sub_college--college-of-nursing"),
-    (r"orthopaed|musculoskeletal", "department--physiotherapy-orthopaedics"),
-    (r"cardiopulmonary", "department--physiotherapy-cardio-pulmonary-sciences"),
-    (r"neurology", "department--physiotherapy-neurology"),
-    (r"sports lab", "department--physiotherapy-sports-physiotherapy"),
-    (r"paediatrics", "department--physiotherapy-paediatrics"),
-    (r"community rehabilitation", "department--physiotherapy-community-rehabilitation-sciences"),
-    (r"hand rehabilitation", "department--occupational-therapy-hand-rehabilitation"),
-    (r"mental health", "department--occupational-therapy-mental-health"),
-    (r"neuro rehabilitation", "department--occupational-therapy-neurosciences"),
+    (r"orthopaed|musculoskeletal", "sub_college--college-of-physiotherapy"),
+    (r"cardiopulmonary", "sub_college--college-of-physiotherapy"),
+    (r"neurology", "sub_college--college-of-physiotherapy"),
+    (r"sports lab", "sub_college--college-of-physiotherapy"),
+    (r"paediatrics", "sub_college--college-of-physiotherapy"),
+    (r"community rehabilitation", "sub_college--college-of-physiotherapy"),
+    (r"hand rehabilitation", "sub_college--college-of-occupational-therapy"),
+    (r"mental health", "sub_college--college-of-occupational-therapy"),
+    (r"neuro rehabilitation", "sub_college--college-of-occupational-therapy"),
     (r"pharmaceutical analysis", "department--pharmacy-pharmaceutical-analysis"),
     (r"pharmaceutical chemistry", "department--pharmacy-pharmaceutical-chemistry"),
     (r"pharmaceutics", "department--pharmacy-pharmaceutics"),
@@ -941,7 +1197,7 @@ CENTRE_PARENT_PATTERNS: list[tuple[str, str]] = [
     (r"network|cyber security|cloud|iot", "department--department-of-networking-and-communications"),
     (r"data mining|green computing", "department--department-of-data-science-and-business-systems"),
     (r"media lab", "department--department-of-visual-communication"),
-    (r"child rights", "department--public-health-general"),
+    (r"child rights", "sub_college--school-of-public-health"),
     (r"research", "directorate--directorate-of-research"),
 ]
 
@@ -1443,7 +1699,7 @@ CENTRE_PARENT_OVERRIDES.update({
     "centre--advance-multilingual-computing": "department--department-of-computational-intelligence",
     "centre--agricultural-microbiology-and-environmental-science": "department--department-of-agronomy",
     "centre--ai-dl-lab-based-on-nvidia-dgx-a100": "department--department-of-computational-intelligence",
-    "centre--biomechanics-lab": "department--physiotherapy-orthopaedics",
+    "centre--biomechanics-lab": "sub_college--college-of-physiotherapy",
     "centre--block-chain-technology-lab-with-ids-inc": "department--department-of-computer-science-and-engineering",
     "centre--center-for-acces": "sub_college--college-of-occupational-therapy",
     "centre--centre-for-computational-sustainability": "department--department-of-computational-intelligence",
@@ -1454,8 +1710,8 @@ CENTRE_PARENT_OVERRIDES.update({
     "centre--cyber-resilience-and-asset-intelligence-lab": "department--department-of-networking-and-communications",
     "centre--dst-fist": "directorate--directorate-of-research",
     "centre--dst-serb-funded-durability-studies-laboratory": "department--department-of-civil-engineering",
-    "centre--electro-therapy-lab": "department--physiotherapy-orthopaedics",
-    "centre--exercise-therapy-lab": "department--physiotherapy-orthopaedics",
+    "centre--electro-therapy-lab": "sub_college--college-of-physiotherapy",
+    "centre--exercise-therapy-lab": "sub_college--college-of-physiotherapy",
     "centre--facilities-for-differently-abled-divyangjan-barrier-free-environment": "sub_college--college-of-occupational-therapy",
     "centre--functional-and-biomaterials-engineering-lab": "department--department-of-biomedical-engineering",
     "centre--hardware-trouble-shooting-lab": "department--department-of-networking-and-communications",
@@ -1465,7 +1721,7 @@ CENTRE_PARENT_OVERRIDES.update({
     "centre--mtech-phd-research-lab": "directorate--directorate-of-research",
     "centre--nuclear-thermo-hydraulics-lab": "department--department-of-mechanical-engineering",
     "centre--nutrition-lab": "department--allied-health-clinical-nutrition-and-dietetics",
-    "centre--orthopedic-lab": "department--physiotherapy-orthopaedics",
+    "centre--orthopedic-lab": "sub_college--college-of-physiotherapy",
     "centre--post-graduate-research-lab": "directorate--directorate-of-research",
     "centre--radiation-measurement-lab": "department--department-of-physics-and-nanotechnology",
     "centre--research-and-development": "directorate--directorate-of-research",
@@ -1487,6 +1743,33 @@ for _centre in RESEARCH_DIRECTORATE_CENTRES:
 
 _RESEARCH_PAGE_URL_TO_RULE: dict[str, dict] = {
     rule["url"].rstrip("/").lower(): rule for rule in RESEARCH_DIRECTORATE_PAGES
+}
+_ENTITY_URL_OVERRIDES: dict[str, str] = {
+    "campus--ramapuram": "https://srmrmp.edu.in/ramapuram-campus/",
+    "centre--cdc-cet": "https://www.srmist.edu.in/department/cet-cdc/",
+    "centre--cdc-csh": "https://www.srmist.edu.in/department/cdc-csh",
+    "centre--cesd": "https://www.srmist.edu.in/department/cesd/",
+    "centre--center-for-immersive-technologies": "https://www.srmist.edu.in/department/centre-for-immersive-technologies/",
+    "centre--cacts": "https://www.srmist.edu.in/department/department-of-chemistry/centre-for-advanced-computational-and-theoretical-sciences-acts/",
+    "centre--srm-brin-centre": "https://www.srmist.edu.in/department/srm-brin-centre-centre-of-excellence-in-automation-technologies/",
+    "department--department-of-law": "https://www.srmist.edu.in/department/school-of-law/",
+    "department--pharmacy-pharmaceutical-analysis": "https://www.srmist.edu.in/department/department-of-pharmaceutical-analysis/",
+    "department--pharmacy-pharmaceutical-chemistry": "https://www.srmist.edu.in/department/department-of-pharmaceutical-chemistry/",
+    "department--pharmacy-pharmaceutical-quality-assurance": "https://www.srmist.edu.in/department/department-of-pharmaceutical-quality-assurance/",
+    "department--pharmacy-pharmaceutical-regulatory-affairs": "https://www.srmist.edu.in/department/department-of-pharmaceutical-regulatory-affairs/",
+    "department--pharmacy-pharmaceutics": "https://www.srmist.edu.in/department/department-of-pharmaceutics/",
+    "department--pharmacy-pharmacognosy": "https://www.srmist.edu.in/department/department-of-pharmacognosy/",
+    "department--pharmacy-pharmacology": "https://medical.srmist.edu.in/departments/pharmacology/",
+    "department--pharmacy-pharmacy-practice": "https://www.srmist.edu.in/department/department-of-pharmacy-practice/",
+    "department--pharmacy-pharmacy-research": "https://www.srmist.edu.in/department/pharmacy-research/",
+    "facility--housing": "https://www.srmist.edu.in/life-at-srm/student-life/housing-dining/",
+    "facility--transport": "https://www.srmist.edu.in/transport-facility/",
+    "facility--library": "https://www.srmist.edu.in/library/",
+    "misc--news-and-events": "https://www.srmist.edu.in/news/",
+    "misc--blog": "https://www.srmist.edu.in/blog/",
+    "misc--about-srmist": "https://www.srmist.edu.in/about-us/",
+    "misc--contact": "https://www.srmist.edu.in/contact-us/",
+    "misc--careers-at-srm": "https://careers.srmist.edu.in/careerportal/careerportal/loginManager/applyJobs.jsp",
 }
 _DIRECTORATE_PAGE_URL_TO_ID: dict[str, str] = {
     "https://www.srmist.edu.in/research/innovation-incubation": "directorate--directorate-of-entrepreneurship-and-innovation",
@@ -1653,6 +1936,7 @@ class KnowledgeGraph:
     def __init__(self):
         self.entities: dict[str, Entity] = {}
         self.relationships: list[Relationship] = []
+        self.admission_profiles: dict[str, dict] = {}
         self._children_idx: dict[str, list[str]] = {}   # source_id -> [target_ids]
         self._parent_idx: dict[str, str] = {}            # target_id -> source_id
         self._name_idx: dict[str, str] = {}              # lowered name -> entity id
@@ -1670,7 +1954,7 @@ class KnowledgeGraph:
         _parent_rel_types = {
             "has_campus", "has_college", "has_sub_college",
             "has_department", "has_centre", "has_directorate",
-            "has_facility", "belongs_to",
+            "has_facility", "has_admission_child", "belongs_to",
         }
         if rel.relation_type in _parent_rel_types:
             self._parent_idx[rel.target_id] = rel.source_id
@@ -2527,8 +2811,14 @@ def build_knowledge_graph(pages: list[dict]) -> KnowledgeGraph:
     _apply_orphan_program_inference(kg)
     _apply_orphan_centre_inference(kg)
 
+    # --- Backfill missing entity URLs from the scraped corpus ---
+    _backfill_entity_urls(kg, pages)
+
     # --- Enforce single-parent for departments and programs ---
     _enforce_single_parent(kg)
+
+    # --- Build layered admissions graph + sidecar profiles ---
+    kg.admission_profiles = integrate_admissions(kg, pages)
 
     # --- Deduplicate relationships ---
     _deduplicate_relationships(kg)
@@ -2570,20 +2860,28 @@ def _maybe_link_centre(kg: KnowledgeGraph, source_eid: str, link: str) -> None:
 
 
 def _deduplicate_relationships(kg: KnowledgeGraph) -> None:
-    seen_rels: set[tuple[str, str, str]] = set()
+    seen_rels: dict[tuple[str, str, str], int] = {}
     unique_rels: list[Relationship] = []
     for r in kg.relationships:
         key = (r.source_id, r.target_id, r.relation_type)
         if key not in seen_rels:
-            seen_rels.add(key)
+            seen_rels[key] = len(unique_rels)
             unique_rels.append(r)
+            continue
+
+        existing = unique_rels[seen_rels[key]]
+        if r.relation_type == "admission_governs":
+            existing_score = float(existing.metadata.get("match_confidence", 0) or 0)
+            new_score = float(r.metadata.get("match_confidence", 0) or 0)
+            if new_score > existing_score:
+                unique_rels[seen_rels[key]] = r
     kg.relationships = unique_rels
     kg._children_idx.clear()
     kg._parent_idx.clear()
     _parent_rel_types = {
         "has_campus", "has_college", "has_sub_college",
         "has_department", "has_centre", "has_directorate",
-        "has_facility", "belongs_to",
+        "has_facility", "has_admission_child", "belongs_to",
     }
     for r in unique_rels:
         kg._children_idx.setdefault(r.source_id, []).append(r.target_id)
@@ -3017,6 +3315,14 @@ def _normalize_known_entities(kg: KnowledgeGraph) -> None:
             relation_type="has_department",
         ))
 
+    _merge_entity_into(
+        kg,
+        old_id="school--school-of-bioengineering",
+        new_id="school--school-of-bio-engineering",
+        new_name="School of Bio-Engineering",
+        new_type="school",
+    )
+
     # 3) Directorate of Entrepreneurship and Innovation should be a directorate.
     _merge_entity_into(
         kg,
@@ -3157,6 +3463,13 @@ def _drop_entity(kg: KnowledgeGraph, entity_id: str) -> None:
         r for r in kg.relationships
         if r.source_id != entity_id and r.target_id != entity_id
     ]
+
+
+def _backfill_entity_urls(kg: KnowledgeGraph, pages: list[dict]) -> None:
+    for entity_id, override_url in _ENTITY_URL_OVERRIDES.items():
+        ent = kg.entities.get(entity_id)
+        if ent:
+            ent.url = override_url
 
 
 # ---------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 # SRMIST Knowledge Graph — Construction Guideline
 
-> **Version:** 1.1  
-> **Last Updated:** 2026-04-01  
+> **Version:** 1.2  
+> **Last Updated:** 2026-04-02  
 > **Purpose:** Canonical reference for building, maintaining, and extending the SRMIST Knowledge Graph.
 
 This document is the **single source of truth** for the KG schema. Any automated builder,
@@ -133,7 +133,6 @@ SRMIST (university)
 │   │   │   ├── College of Occupational Therapy (sub_college)
 │   │   │   ├── College of Nursing (sub_college)
 │   │   │   └── School of Public Health (sub_college)
-│   │   │       └── [each sub_college has its own departments]
 │   │   ├── College of Agricultural Sciences (college)
 │   │   │   └── 19 Departments (department)
 │   │   ├── SRM School of Law (college)
@@ -183,6 +182,8 @@ SRMIST (university)
     └── [similar structure, populate from scrape]
 ```
 
+Note: within Medicine & Health Sciences, only College of Medicine, College of Dentistry, and College of Pharmacy keep seeded child departments. College of Physiotherapy, College of Occupational Therapy, College of Nursing, and School of Public Health are modeled as college-cum-department units, while Medicine and Dentistry department grouping is captured in `attributes.type`.
+
 ---
 
 ## 5. Naming Conventions
@@ -225,6 +226,8 @@ The following data is defined as constants in `knowledge_graph.py` under `SEED_*
 2. Campus entities + `has_campus` links
 3. KTR college entities + `has_college` links from KTR
 4. Medicine sub-college entities + `has_sub_college` links from Medicine
+   - Only Medicine, Dentistry, and Pharmacy keep seeded child departments.
+   - Medicine and Dentistry department grouping lives in `attributes.type`; existing `attributes.category` is retained where already present.
 5. KTR directorate entities + `has_directorate` links from KTR
 6. KTR facility entities + `has_facility` links from KTR
 7. Admission nodes + `has_admission` links

@@ -33,6 +33,11 @@ from rank_bm25 import BM25Okapi
 from sentence_transformers import CrossEncoder, SentenceTransformer
 import numpy as np
 
+from backend.admission_profiles import (
+    answer_admission_question,
+    load_admission_profiles,
+    save_admission_profiles,
+)
 from backend.knowledge_graph import KnowledgeGraph, build_knowledge_graph
 from backend.settings import SETTINGS
 
@@ -139,6 +144,8 @@ _LEVEL_PATTERNS: list[tuple[re.Pattern, str]] = [
 
 def classify_page_tier(url: str) -> str:
     url_lower = url.lower()
+    if "applications.srmist.edu.in" in url_lower or "intlapplications.srmist.edu.in" in url_lower:
+        return "tier1_admission"
     for tier, patterns in _TIER_RULES:
         if any(p in url_lower for p in patterns):
             return tier
@@ -151,6 +158,8 @@ def is_noise_page(url: str) -> bool:
 
 def extract_entity_type(url: str) -> str:
     url_lower = url.lower()
+    if "applications.srmist.edu.in" in url_lower or "intlapplications.srmist.edu.in" in url_lower:
+        return "admission"
     for pattern, entity_type in _ENTITY_TYPE_RULES:
         if pattern in url_lower:
             return entity_type
@@ -506,6 +515,8 @@ def get_reranker() -> Optional[CrossEncoder]:
 
 _knowledge_graph: KnowledgeGraph | None = None
 _KG_PATH = Path(SETTINGS.rag_vector_db_path) / "knowledge_graph.json"
+_admission_profiles: dict[str, dict] | None = None
+_ADMISSION_PROFILE_PATH = Path(SETTINGS.rag_vector_db_path) / "admission_profiles.json"
 
 
 def get_knowledge_graph() -> KnowledgeGraph | None:
@@ -516,6 +527,17 @@ def get_knowledge_graph() -> KnowledgeGraph | None:
         except Exception as e:
             log.warning(f"Could not load KG: {e}")
     return _knowledge_graph
+
+
+def get_admission_profiles() -> dict[str, dict]:
+    global _admission_profiles
+    if _admission_profiles is None and _ADMISSION_PROFILE_PATH.exists():
+        try:
+            _admission_profiles = load_admission_profiles(str(_ADMISSION_PROFILE_PATH))
+        except Exception as e:
+            log.warning(f"Could not load admission profiles: {e}")
+            _admission_profiles = {}
+    return _admission_profiles or {}
 
 
 # ================= VECTOR DB (Qdrant) =================
@@ -992,7 +1014,7 @@ def build_db(force_rebuild: bool = False):
     Build or incrementally update the vector DB.
     Pass force_rebuild=True to wipe and re-embed everything.
     """
-    global _sparse_vectorizer, _knowledge_graph
+    global _sparse_vectorizer, _knowledge_graph, _admission_profiles
 
     client = get_qdrant_client()
     _ensure_collection(client, force_rebuild)
@@ -1011,6 +1033,8 @@ def build_db(force_rebuild: bool = False):
     log.info("Building Knowledge Graph...")
     _knowledge_graph = build_knowledge_graph(pages)
     _knowledge_graph.save(str(_KG_PATH))
+    _admission_profiles = getattr(_knowledge_graph, "admission_profiles", {}) or {}
+    save_admission_profiles(_admission_profiles, str(_ADMISSION_PROFILE_PATH))
     log.info(f"Knowledge Graph: {_knowledge_graph.stats()}")
 
     if force_rebuild:
@@ -1677,6 +1701,19 @@ def query_rag(
     # ---- Knowledge Graph lookup (before vector search) ----
     kg_grounding: str = ""
     kg = get_knowledge_graph()
+    admission_profiles = get_admission_profiles() if is_admission_query or intent.get("is_how_to_apply_query") else {}
+
+    if kg and admission_profiles and (is_admission_query or intent.get("is_how_to_apply_query")):
+        structured_admission = answer_admission_question(
+            processed_question,
+            campus=campus,
+            kg=kg,
+            profiles=admission_profiles,
+        )
+        if structured_admission:
+            log.info("Structured admission answer found.")
+            return structured_admission
+
     if kg:
         if query_type == "listing":
             kg_answer = kg.answer_listing_query(processed_question)
