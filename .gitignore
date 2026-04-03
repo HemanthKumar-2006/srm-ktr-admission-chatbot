@@ -32,3 +32,6 @@ Thumbs.db
 
 # Ollama
 *.gguf
+
+# Cursor
+.cursor/
