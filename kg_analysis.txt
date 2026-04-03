@@ -1,0 +1,257 @@
+﻿Total entities: 572
+Total relationships: 223
+
+  admission: 2
+  campus: 3
+  college: 11
+  department: 111
+  directorate: 10
+  facility: 4
+  misc: 5
+  program: 408
+  publication: 2
+  school: 8
+  sub_college: 7
+  university: 1
+
+=== DUPLICATE NAMES ===
+DUPLICATE NAME: "career development"
+  -> department--cdc-csh (type=department)
+  -> department--cet-cdc (type=department)
+DUPLICATE NAME: "chemistry"
+  -> department--department-of-chemistry-2 (type=department)
+  -> department--department-of-chemistry (type=department)
+DUPLICATE NAME: "college of nursing"
+  -> sub_college--college-of-nursing (type=sub_college)
+  -> department--college-of-nursing (type=department)
+DUPLICATE NAME: "college of occupational therapy"
+  -> sub_college--college-of-occupational-therapy (type=sub_college)
+  -> department--college-of-occupational-therapy (type=department)
+DUPLICATE NAME: "college of pharmacy"
+  -> sub_college--college-of-pharmacy (type=sub_college)
+  -> department--college-of-pharmacy (type=department)
+DUPLICATE NAME: "college of physiotherapy"
+  -> sub_college--college-of-physiotherapy (type=sub_college)
+  -> department--college-of-physiotherapy (type=department)
+DUPLICATE NAME: "m.tech. big data analytics"
+  -> program--m-tech-big-data-analytics (type=program)
+  -> program--m-tech-in-big-data-analytics (type=program)
+DUPLICATE NAME: "mathematics"
+  -> department--department-of-mathematics (type=department)
+  -> department--department-of-mathematics-2 (type=department)
+DUPLICATE NAME: "phd. biotechnology"
+  -> program--phd-in-biotechnology (type=program)
+  -> program--regular-phd (type=program)
+DUPLICATE NAME: "physics and nanotechnology"
+  -> department--department-of-physics-and-nanotechnology (type=department)
+  -> department--department-of-physics (type=department)
+DUPLICATE NAME: "school of public health"
+  -> sub_college--school-of-public-health (type=sub_college)
+  -> department--school-of-public-health (type=department)
+
+=== ALL COLLEGE ENTITIES ===
+  college--faculty-of-engineering-and-technology: "Faculty of Engineering & Technology" url=https://www.srmist.edu.in/college/college-of-engineering-technology/
+  college--faculty-of-science-and-humanities: "Faculty of Science & Humanities" url=https://www.srmist.edu.in/college/college-of-science-and-humanities/
+  college--medicine-and-health-sciences: "Medicine & Health Sciences" url=https://www.srmist.edu.in/college/medicine-and-health-sciences/
+  college--college-of-agricultural-sciences: "College of Agricultural Sciences" url=https://www.srmist.edu.in/department/college-of-agriculture-sciences/
+  college--srm-school-of-law: "SRM School of Law" url=https://www.srmist.edu.in/college/college-of-law/
+  college--faculty-of-management: "Faculty of Management" url=https://www.srmist.edu.in/faculty-of-management/
+  college--agriculture-sciences: "SRM College of Agricultural Sciences |" url=https://www.srmist.edu.in/college/agriculture-sciences/
+  college--college-of-engineering-technology: "College of Engineering and Technology" url=https://www.srmist.edu.in/college/college-of-engineering-technology/
+  college--college-of-law: "College of Law" url=https://www.srmist.edu.in/college/college-of-law/
+  college--college-of-management: "College of Management" url=https://www.srmist.edu.in/college/college-of-management/
+  college--college-of-science-and-humanities: "College of Science and Humanities" url=https://www.srmist.edu.in/college/college-of-science-and-humanities/
+
+=== ADMISSION RELATIONSHIPS ===
+  university--srmist --[has_admission]--> admission--india
+  university--srmist --[has_admission]--> admission--international
+  directorate--controller-of-examinations --[also_listed_under]--> admission--india
+  directorate--controller-of-examinations --[also_listed_under]--> admission--international
+
+=== COLLABORATES_WITH ===
+  directorate--directorate-of-research --[collaborates_with]--> college--faculty-of-engineering-and-technology
+  directorate--directorate-of-research --[collaborates_with]--> college--faculty-of-science-and-humanities
+  directorate--directorate-of-career-centre --[collaborates_with]--> college--faculty-of-engineering-and-technology
+
+=== CENTRES TYPED AS DEPARTMENT ===
+  directorate--directorate-of-career-centre: "Directorate of Career Centre" type=directorate
+  department--cdc-csh: "Career Development" type=department
+  department--center-for-architectural-heritage: "Center For Architectural Heritage" type=department
+  department--center-of-excellence-for-electronic-cooling-and-cfd-simulation: "Center Of Excellence For Electronic Cooling And Cfd Simulation" type=department
+  department--center-of-excellence-in-materials-for-advanced-technologies-cemat: "Center Of Excellence In Materials For Advanced Technologies Cemat" type=department
+  department--centre-for-analysis-of-movement-ergonomics-research-and-animersion: "Centre For Analysis Of Movement Ergonomics Research And Animersion" type=department
+  department--centre-for-composites-and-advanced-materials: "Centre For Composites And Advanced Materials" type=department
+  department--centre-for-electric-mobility: "Centre For Electric Mobility" type=department
+  department--centre-for-immersive-technologies: "Centre For Immersive Technologies" type=department
+  department--centre-for-research-in-defence-and-international-studies: "Centre For Research In Defence And International Studies" type=department
+  department--centre-for-research-in-environment-sustainability-advocacy-and-climate-change-reach: "Centre For Research In Environment Sustainability Advocacy And Climate Change Reach" type=department
+  department--centre-for-statistics: "Centre For Statistics" type=department
+  department--centre-for-yoga: "Centre For Yoga" type=department
+  department--cet-cdc: "Career Development" type=department
+  department--dr-t-r-paarivendhar-multidisciplinary-research-centre: "Dr T R Paarivendhar Multidisciplinary Research Centre" type=department
+  department--nanotechnology-research-center: "Nanotechnology Research Center" type=department
+  department--srm-brin-centre-centre-of-excellence-in-automation-technologies: "Srm Brin Centre Centre Of Excellence In Automation Technologies" type=department
+  department--srm-medical-research-centre: "Srm Medical Research Centre" type=department
+
+=== DEPARTMENTS WITH MULTIPLE PARENTS ===
+MULTI-PARENT: department--college-of-agriculture-sciences
+  <- college--agriculture-sciences (has_department)
+  <- college--college-of-engineering-technology (has_department)
+  <- college--college-of-law (has_department)
+  <- college--college-of-management (has_department)
+  <- college--college-of-science-and-humanities (has_department)
+  <- college--medicine-and-health-sciences (has_department)
+MULTI-PARENT: department--college-of-nursing
+  <- college--agriculture-sciences (has_department)
+  <- college--college-of-engineering-technology (has_department)
+  <- college--college-of-law (has_department)
+  <- college--college-of-management (has_department)
+  <- college--college-of-science-and-humanities (has_department)
+  <- college--medicine-and-health-sciences (has_department)
+MULTI-PARENT: department--college-of-occupational-therapy
+  <- college--agriculture-sciences (has_department)
+  <- college--college-of-engineering-technology (has_department)
+  <- college--college-of-law (has_department)
+  <- college--college-of-management (has_department)
+  <- college--college-of-science-and-humanities (has_department)
+  <- college--medicine-and-health-sciences (has_department)
+MULTI-PARENT: department--college-of-pharmacy
+  <- college--agriculture-sciences (has_department)
+  <- college--college-of-engineering-technology (has_department)
+  <- college--college-of-law (has_department)
+  <- college--college-of-management (has_department)
+  <- college--college-of-science-and-humanities (has_department)
+  <- college--medicine-and-health-sciences (has_department)
+MULTI-PARENT: department--college-of-physiotherapy
+  <- college--agriculture-sciences (has_department)
+  <- college--college-of-engineering-technology (has_department)
+  <- college--college-of-law (has_department)
+  <- college--college-of-management (has_department)
+  <- college--college-of-science-and-humanities (has_department)
+  <- college--medicine-and-health-sciences (has_department)
+MULTI-PARENT: department--department-of-aerospace-engineering
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-mechanical-engineering (has_department)
+MULTI-PARENT: department--department-of-architecture
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-architecture-and-interior-design (has_department)
+MULTI-PARENT: department--department-of-automobile-engineering
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-mechanical-engineering (has_department)
+MULTI-PARENT: department--department-of-biochemistry
+  <- college--college-of-science-and-humanities (has_department)
+  <- school--school-of-basic-sciences (has_department)
+MULTI-PARENT: department--department-of-biomedical-engineering
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-bioengineering (has_department)
+MULTI-PARENT: department--department-of-biotechnology
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-bioengineering (has_department)
+MULTI-PARENT: department--department-of-chemical-engineering
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-bioengineering (has_department)
+MULTI-PARENT: department--department-of-civil-engineering
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-architecture-and-interior-design (has_department)
+MULTI-PARENT: department--department-of-computational-intelligence
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-computing (has_department)
+MULTI-PARENT: department--department-of-computing-technologies
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-computing (has_department)
+MULTI-PARENT: department--department-of-data-science-and-business-systems
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-computing (has_department)
+MULTI-PARENT: department--department-of-electrical-and-electronics-engineering
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-electrical-and-electronics-engineering (has_department)
+MULTI-PARENT: department--department-of-electronics-instrumentation
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-electrical-and-electronics-engineering (has_department)
+MULTI-PARENT: department--department-of-food-technology
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-bioengineering (has_department)
+MULTI-PARENT: department--department-of-genetic-engineering
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-bioengineering (has_department)
+MULTI-PARENT: department--department-of-language-culture-and-society
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-basic-sciences (has_department)
+MULTI-PARENT: department--department-of-mathematics-and-statistics
+  <- college--college-of-science-and-humanities (has_department)
+  <- school--school-of-basic-sciences (has_department)
+MULTI-PARENT: department--department-of-mechanical-engineering
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-mechanical-engineering (has_department)
+MULTI-PARENT: department--department-of-mechatronics
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-mechanical-engineering (has_department)
+MULTI-PARENT: department--department-of-networking-and-communications
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-computing (has_department)
+MULTI-PARENT: department--department-of-physics-and-nanotechnology
+  <- college--college-of-engineering-technology (has_department)
+  <- school--school-of-basic-sciences (has_department)
+MULTI-PARENT: department--institute-of-hotel-and-catering-management
+  <- college--agriculture-sciences (has_department)
+  <- college--college-of-engineering-technology (has_department)
+  <- college--college-of-law (has_department)
+  <- college--college-of-management (has_department)
+  <- college--college-of-science-and-humanities (has_department)
+  <- college--medicine-and-health-sciences (has_department)
+MULTI-PARENT: department--school-of-public-health
+  <- college--agriculture-sciences (has_department)
+  <- college--college-of-engineering-technology (has_department)
+  <- college--college-of-law (has_department)
+  <- college--college-of-management (has_department)
+  <- college--college-of-science-and-humanities (has_department)
+  <- college--medicine-and-health-sciences (has_department)
+MULTI-PARENT: department--srm-dbt-platform
+  <- college--agriculture-sciences (has_department)
+  <- college--college-of-engineering-technology (has_department)
+  <- college--college-of-law (has_department)
+  <- college--college-of-management (has_department)
+  <- college--college-of-science-and-humanities (has_department)
+  <- college--medicine-and-health-sciences (has_department)
+
+=== PROGRAMS WITH MULTIPLE PARENTS ===
+MULTI-PARENT: program--bachelor-of-arts-and-legum-baccalaureus-honours "B.A.,LL.B. Bachelor of Arts and Legum Baccalaureus (Honours)"
+  <- college--college-of-law
+  <- department--school-of-law
+MULTI-PARENT: program--bachelor-of-commerce-and-legum-baccalaureus-honours "B.Com.,LL.B. Bachelor of Commerce and Legum Baccalaureus (Honours)"
+  <- college--college-of-law
+  <- department--school-of-law
+MULTI-PARENT: program--l-l-m-international-trade-law "LL.M. International Trade Law & IPR"
+  <- college--college-of-law
+  <- department--school-of-law
+MULTI-PARENT: program--llm-corporate-law "LL.M. Corporate Law"
+  <- college--college-of-law
+  <- department--school-of-law
+MULTI-PARENT: program--llm-cyber-law-and-security "LL.M. Cyber Law and Security"
+  <- college--college-of-law
+  <- department--school-of-law
+MULTI-PARENT: program--ph-d-in-nanotechnology-full-time "PhD. Nanotechnology (Full Time)"
+  <- department--department-of-physics-and-nanotechnology
+  <- department--department-of-physics
+MULTI-PARENT: program--ph-d-in-physics-full-time "PhD. Physics (Full Time)"
+  <- department--department-of-physics-and-nanotechnology
+  <- department--department-of-physics
+
+=== MISTYPED ENTITIES (not real departments) ===
+  SUSPICIOUS: department--achievements: "Achievements"
+  SUSPICIOUS ID: department--achievements: "Achievements"
+  SUSPICIOUS ID: department--cdc-csh: "Career Development"
+  SUSPICIOUS: department--cesd: "Cesd"
+  SUSPICIOUS ID: department--cesd: "Cesd"
+  SUSPICIOUS ID: department--cet-cdc: "Career Development"
+  SUSPICIOUS: department--librarian: "Librarian"
+  SUSPICIOUS ID: department--librarian: "Librarian"
+  SUSPICIOUS: department--publications-2022-23: "Publications 2022 23"
+  SUSPICIOUS ID: department--publications-2022-23: "Publications 2022 23"
+  SUSPICIOUS: department--publications-2023-24: "Publications 2023 24"
+  SUSPICIOUS ID: department--publications-2023-24: "Publications 2023 24"
+  SUSPICIOUS: department--research-2: "Research 2"
+  SUSPICIOUS ID: department--research-2: "Research 2"
+  SUSPICIOUS ID: department--research: "Research"
+  SUSPICIOUS: department--som: "Som"
+  SUSPICIOUS ID: department--som: "Som"

@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+requests
+aiohttp
+beautifulsoup4
+qdrant-client
+rank-bm25
+sentence-transformers
+langchain-text-splitters
+pypdf
+numpy
