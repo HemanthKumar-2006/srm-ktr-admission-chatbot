@@ -7,5 +7,4 @@ qdrant-client
 rank-bm25
 sentence-transformers
 langchain-text-splitters
-pypdf
 numpy

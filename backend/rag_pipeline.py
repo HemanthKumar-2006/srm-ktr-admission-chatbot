@@ -6,6 +6,7 @@ SRM RAG Pipeline v4.0
 - v4.0: Page authority scoring and recency-aware reranking
 - v4.0: Contextual compression before LLM calls
 - v4.0: Few-shot prompt templates with faithfulness guardrails
+- v4.1: GPU-aware model loading via DeviceConfig; new nested SETTINGS
 """
 
 # ================= IMPORTS =================
@@ -33,38 +34,49 @@ from rank_bm25 import BM25Okapi
 from sentence_transformers import CrossEncoder, SentenceTransformer
 import numpy as np
 
+from backend.admission_profiles import (
+    answer_admission_question,
+    load_admission_profiles,
+    save_admission_profiles,
+)
 from backend.knowledge_graph import KnowledgeGraph, build_knowledge_graph
-from backend.settings import SETTINGS
+from backend.settings import SETTINGS  # new nested Settings object
 
 # ================= CONFIG =================
+# Thin bridge: pull values from the new nested SETTINGS so the rest of the
+# pipeline continues to use the short CFG.* names without change.
 
 @dataclass
 class Config:
-    data_path: Path = Path(SETTINGS.rag_data_path)
-    vector_db_path: str = SETTINGS.rag_vector_db_path
-    collection_name: str = SETTINGS.rag_collection_name
+    data_path: Path = field(default_factory=lambda: Path(SETTINGS.rag.data_path))
+    vector_db_path: str = field(default_factory=lambda: SETTINGS.rag.vector_db_path)
+    collection_name: str = field(default_factory=lambda: SETTINGS.rag.collection_name)
 
     # Chunking
-    chunk_size: int = SETTINGS.rag_chunk_size
-    chunk_overlap: int = SETTINGS.rag_chunk_overlap
-    min_chunk_length: int = SETTINGS.rag_min_chunk_length
+    chunk_size: int = field(default_factory=lambda: SETTINGS.rag.chunking.size)
+    chunk_overlap: int = field(default_factory=lambda: SETTINGS.rag.chunking.overlap)
+    min_chunk_length: int = field(default_factory=lambda: SETTINGS.rag.chunking.min_length)
 
     # Retrieval
-    retrieval_limit: int = SETTINGS.rag_retrieval_limit  # Candidates from vector DB
-    max_distance: float = SETTINGS.rag_max_distance       # Filter out low-quality matches
-    final_chunk_count: int = SETTINGS.rag_final_chunk_count  # Chunks sent to LLM after reranking
+    retrieval_limit: int = field(default_factory=lambda: SETTINGS.rag.retrieval.limit)
+    max_distance: float = field(default_factory=lambda: SETTINGS.rag.retrieval.max_distance)
+    final_chunk_count: int = field(default_factory=lambda: SETTINGS.rag.retrieval.final_chunk_count)
 
-    # Embedding batch size
-    embed_batch: int = SETTINGS.rag_embed_batch
+    # Embedding
+    embed_batch: int = field(default_factory=lambda: SETTINGS.rag.embed.batch_size)  # 512
+    embed_model: str = field(default_factory=lambda: SETTINGS.rag.embed.model)
 
-    # Models
-    embed_model: str = SETTINGS.rag_embed_model
-    rerank_model: str = SETTINGS.rag_rerank_model
+    # Reranker / device
+    rerank_model: str = field(default_factory=lambda: SETTINGS.rag.rerank_model)
+    torch_device: str = field(default_factory=lambda: SETTINGS.rag.device.torch_device)  # "cuda:0" or "cpu"
+    use_fp16: bool = field(default_factory=lambda: SETTINGS.rag.device.use_fp16)
 
     # LLM
-    llm_url: str = SETTINGS.rag_llm_url
-    llm_model: str = SETTINGS.rag_llm_model
-    llm_stream: bool = SETTINGS.rag_llm_stream
+    llm_url: str = field(default_factory=lambda: SETTINGS.rag.llm.url)
+    llm_model: str = field(default_factory=lambda: SETTINGS.rag.llm.model)
+    llm_stream: bool = field(default_factory=lambda: SETTINGS.rag.llm.stream)
+    llm_num_predict: int = field(default_factory=lambda: SETTINGS.rag.llm.num_predict)
+
 
 CFG = Config()
 
@@ -139,6 +151,8 @@ _LEVEL_PATTERNS: list[tuple[re.Pattern, str]] = [
 
 def classify_page_tier(url: str) -> str:
     url_lower = url.lower()
+    if "applications.srmist.edu.in" in url_lower or "intlapplications.srmist.edu.in" in url_lower:
+        return "tier1_admission"
     for tier, patterns in _TIER_RULES:
         if any(p in url_lower for p in patterns):
             return tier
@@ -151,6 +165,8 @@ def is_noise_page(url: str) -> bool:
 
 def extract_entity_type(url: str) -> str:
     url_lower = url.lower()
+    if "applications.srmist.edu.in" in url_lower or "intlapplications.srmist.edu.in" in url_lower:
+        return "admission"
     for pattern, entity_type in _ENTITY_TYPE_RULES:
         if pattern in url_lower:
             return entity_type
@@ -193,10 +209,7 @@ def extract_parent_entity(url: str) -> str:
 
 
 def compute_page_authority(url: str, entity_type: str) -> float:
-    """
-    Score how authoritative a page is within SRM's hierarchy.
-    Root/overview pages score higher than subpages.
-    """
+    """Score how authoritative a page is within SRM's hierarchy."""
     stripped = re.sub(r"^https?://(?:www\.)?srmist\.edu\.in", "", url.rstrip("/"))
     depth = len([p for p in stripped.split("/") if p])
 
@@ -220,56 +233,50 @@ def compute_page_authority(url: str, entity_type: str) -> float:
 # ================= ABBREVIATION EXPANSION =================
 
 ABBREVIATIONS: dict[str, str] = {
-    # Academic departments / programs
-    "cintel":      "computational intelligence",
-    "nwc":         "networking and communications",
-    "ctech":       "computing technologies",
-    "dsbs":        "data science and business systems",
-    "cse":         "computer science engineering",
-    "ece":         "electronics and communication engineering",
-    "eee":         "electrical and electronics engineering",
-    "mech":        "mechanical engineering",
-    "civil":       "civil engineering",
-    "it":          "information technology",
-    "biotech":     "biotechnology",
-    "biomed":      "biomedical engineering",
-    "aiml":        "artificial intelligence machine learning",
-    "aids":        "artificial intelligence data science",
-    "cyber":       "cyber security",
-    "vlsi":        "vlsi design",
-    "auto":        "automobile engineering",
-    "aero":        "aerospace engineering",
-    "chem":        "chemical engineering",
-    "robotics":    "robotics and automation",
-    "iot":         "internet of things",
-    # Roles
-    "hod":         "head of department",
-    "vc":          "vice chancellor",
-    "dc":          "dean campus",
-    # Exams / processes
-    "srmjeee":     "srm joint engineering entrance examination",
-    "jee":         "joint entrance examination",
-    "neet":        "national eligibility cum entrance test",
-    "gate":        "graduate aptitude test in engineering",
-    "cat":         "common admission test",
-    "gmat":        "graduate management admission test",
-
-    # Campus short-forms
-    "ktr":         "kattankulathur campus",
-    "vdp":         "vadapalani campus",
-    "rmp":         "ramapuram campus",
-    "ncr":         "delhi ncr campus",
-    # Miscellaneous
-    "pg":          "postgraduate",
-    "ug":          "undergraduate",
-    "btech":       "bachelor of technology",
-    "mtech":       "master of technology",
-    "phd":         "doctor of philosophy",
-    "mba":         "master of business administration",
-    "mca":         "master of computer applications",
-    "nri":         "non resident indian",
-    "dept":        "department",
-    "sem":         "semester",
+    "cintel":   "computational intelligence",
+    "nwc":      "networking and communications",
+    "ctech":    "computing technologies",
+    "dsbs":     "data science and business systems",
+    "cse":      "computer science engineering",
+    "ece":      "electronics and communication engineering",
+    "eee":      "electrical and electronics engineering",
+    "mech":     "mechanical engineering",
+    "civil":    "civil engineering",
+    "it":       "information technology",
+    "biotech":  "biotechnology",
+    "biomed":   "biomedical engineering",
+    "aiml":     "artificial intelligence machine learning",
+    "aids":     "artificial intelligence data science",
+    "cyber":    "cyber security",
+    "vlsi":     "vlsi design",
+    "auto":     "automobile engineering",
+    "aero":     "aerospace engineering",
+    "chem":     "chemical engineering",
+    "robotics": "robotics and automation",
+    "iot":      "internet of things",
+    "hod":      "head of department",
+    "vc":       "vice chancellor",
+    "dc":       "dean campus",
+    "srmjeee":  "srm joint engineering entrance examination",
+    "jee":      "joint entrance examination",
+    "neet":     "national eligibility cum entrance test",
+    "gate":     "graduate aptitude test in engineering",
+    "cat":      "common admission test",
+    "gmat":     "graduate management admission test",
+    "ktr":      "kattankulathur campus",
+    "vdp":      "vadapalani campus",
+    "rmp":      "ramapuram campus",
+    "ncr":      "delhi ncr campus",
+    "pg":       "postgraduate",
+    "ug":       "undergraduate",
+    "btech":    "bachelor of technology",
+    "mtech":    "master of technology",
+    "phd":      "doctor of philosophy",
+    "mba":      "master of business administration",
+    "mca":      "master of computer applications",
+    "nri":      "non resident indian",
+    "dept":     "department",
+    "sem":      "semester",
 }
 
 _ABBREV_PATTERN = re.compile(
@@ -279,7 +286,6 @@ _ABBREV_PATTERN = re.compile(
 
 
 def expand_abbreviations(text: str) -> str:
-    """Replace known abbreviations with their full forms while keeping the original term."""
     def _replace(match: re.Match) -> str:
         abbr = match.group(0)
         full = ABBREVIATIONS.get(abbr.lower(), abbr)
@@ -312,7 +318,6 @@ _QUERY_SYNONYMS: list[tuple[re.Pattern, str]] = [
 
 
 def reformulate_query(query: str) -> str:
-    """Append synonym hints when key topic phrases are detected."""
     extra: list[str] = []
     for pattern, synonyms in _QUERY_SYNONYMS:
         if pattern.search(query):
@@ -325,12 +330,6 @@ def reformulate_query(query: str) -> str:
 # ================= QUERY PREPROCESSING =================
 
 def preprocess_query(question: str) -> str:
-    """
-    Full preprocessing pipeline applied to the user's question before
-    intent detection and retrieval. Steps:
-    1. Expand known abbreviations (CINTEL → Computational Intelligence, etc.)
-    2. Append synonym-based hints for common query patterns
-    """
     processed = expand_abbreviations(question)
     processed = reformulate_query(processed)
     log.debug(f"Preprocessed query: {question!r} → {processed!r}")
@@ -355,7 +354,6 @@ _ADMISSION_DATE_SIGNAL = re.compile(
 _SRMJEEE_SIGNAL = re.compile(r"\bsrmje{2,3}\b|\bsrm\s*j[e]{2,3}\b", re.I)
 _CET_SIGNAL = re.compile(r"\bcet\b", re.I)
 
-
 _LISTING_SIGNAL = re.compile(
     r"\b(list|what are|which|how many|all|available|departments?\s+under|programs?\s+offered)\b",
     re.I,
@@ -372,10 +370,16 @@ _PERSON_SIGNAL = re.compile(
     r"\b(who is|tell me about dr|prof\.|professor|faculty|hod|head of|dean)\b",
     re.I,
 )
+_ROLE_QUERY_SIGNAL = re.compile(
+    r"\b(hod|head\s+of\s+(?:the\s+)?department|head\s+of|chairperson|chair\s+person|department\s+head)\b",
+    re.I,
+)
+_ROLE_QUERY_HINTS = (
+    "head of department HOD chairperson faculty profile contact email phone department office"
+)
 
 
 def classify_query_type(question: str) -> str:
-    """High-level query type classification for prompt routing."""
     q = question.strip()
     if _PERSON_SIGNAL.search(q):
         return "person_lookup"
@@ -450,13 +454,11 @@ def filter_chunks_for_intent(
         srmjeee_chunks = [item for item in filtered if _SRMJEEE_SIGNAL.search(item[0])]
         non_cet_chunks = [item for item in filtered if not _CET_SIGNAL.search(item[0])]
 
-        # Prefer explicit SRMJEEE chunks first; otherwise avoid CET-only instructions.
         if srmjeee_chunks:
             filtered = srmjeee_chunks + [item for item in non_cet_chunks if item not in srmjeee_chunks]
         elif non_cet_chunks:
             filtered = non_cet_chunks
 
-        # Small ranking boost toward admission-focused sources.
         def apply_priority(item: tuple[str, dict, float]) -> tuple[int, int, int]:
             doc, meta, _ = item
             source = str(meta.get("source", "")).lower()
@@ -469,43 +471,44 @@ def filter_chunks_for_intent(
         filtered = sorted(filtered, key=apply_priority, reverse=True)
 
     if intent.get("is_role_query"):
-        # Prioritize chunks where entity_type in {"department", "faculty"}
-        # Prioritize chunks where parent_entity matches the department name in the query
         def apply_role_priority(item: tuple[str, dict, float]) -> tuple[int, int, float]:
             doc, meta, score = item
             entity_type = meta.get("entity_type", "")
             parent_entity = meta.get("parent_entity", "").lower()
-            
             parent_match = 1 if parent_entity and parent_entity in question.lower() else 0
             type_match = 1 if entity_type in {"department", "faculty"} else 0
-            
             return (parent_match, type_match, score)
-            
+
         filtered = sorted(filtered, key=apply_role_priority, reverse=True)
 
-    # Keep original chunks if filtering removed everything.
     return filtered or chunks
 
-# ================= MODELS =================
+
+# ================= MODELS (GPU-aware) =================
 
 @lru_cache(maxsize=1)
 def get_embedder() -> SentenceTransformer:
-    log.info(f"Loading embedding model: {CFG.embed_model}")
-    return SentenceTransformer(CFG.embed_model)
+    log.info(f"Loading embedding model: {CFG.embed_model} on {CFG.torch_device}")
+    model = SentenceTransformer(CFG.embed_model, device=CFG.torch_device)
+    return model
+
 
 @lru_cache(maxsize=1)
 def get_reranker() -> Optional[CrossEncoder]:
     try:
-        log.info(f"Loading reranker: {CFG.rerank_model}")
-        return CrossEncoder(CFG.rerank_model)
+        log.info(f"Loading reranker: {CFG.rerank_model} on {CFG.torch_device}")
+        return CrossEncoder(CFG.rerank_model, device=CFG.torch_device)
     except Exception as e:
         log.warning(f"Reranker unavailable: {e}")
         return None
 
+
 # ================= KNOWLEDGE GRAPH =================
 
 _knowledge_graph: KnowledgeGraph | None = None
-_KG_PATH = Path(SETTINGS.rag_vector_db_path) / "knowledge_graph.json"
+_KG_PATH = Path(SETTINGS.rag.vector_db_path) / "knowledge_graph.json"
+_admission_profiles: dict[str, dict] | None = None
+_ADMISSION_PROFILE_PATH = Path(SETTINGS.rag.vector_db_path) / "admission_profiles.json"
 
 
 def get_knowledge_graph() -> KnowledgeGraph | None:
@@ -516,6 +519,17 @@ def get_knowledge_graph() -> KnowledgeGraph | None:
         except Exception as e:
             log.warning(f"Could not load KG: {e}")
     return _knowledge_graph
+
+
+def get_admission_profiles() -> dict[str, dict]:
+    global _admission_profiles
+    if _admission_profiles is None and _ADMISSION_PROFILE_PATH.exists():
+        try:
+            _admission_profiles = load_admission_profiles(str(_ADMISSION_PROFILE_PATH))
+        except Exception as e:
+            log.warning(f"Could not load admission profiles: {e}")
+            _admission_profiles = {}
+    return _admission_profiles or {}
 
 
 # ================= VECTOR DB (Qdrant) =================
@@ -643,7 +657,7 @@ class SparseVectorizer:
 
 
 _sparse_vectorizer: SparseVectorizer | None = None
-_SPARSE_MODEL_PATH = Path(SETTINGS.rag_vector_db_path) / "sparse_vectorizer.pkl"
+_SPARSE_MODEL_PATH = Path(SETTINGS.rag.vector_db_path) / "sparse_vectorizer.pkl"
 
 
 def get_sparse_vectorizer() -> SparseVectorizer | None:
@@ -654,19 +668,16 @@ def get_sparse_vectorizer() -> SparseVectorizer | None:
         log.info("Loaded sparse vectorizer from disk.")
     return _sparse_vectorizer
 
+
 # ================= TEXT UTILS =================
 
 def clean(text: str) -> str:
     return re.sub(r"\s+", " ", str(text)).strip()
 
+
 # ================= DATA LOADERS =================
-# All aligned with scraper v2 output structure
 
 def load_tables(folder: Path) -> str:
-    """
-    Scraper v2 saves tables as tables/table_0.csv, table_1.csv …
-    Old code looked for tables.json which never existed → always empty.
-    """
     table_dir = folder / "tables"
     if not table_dir.exists():
         return ""
@@ -677,7 +688,6 @@ def load_tables(folder: Path) -> str:
             with open(csv_file, encoding="utf-8") as f:
                 rows = list(csv.reader(f))
             if rows:
-                # Convert to readable text: "Col1 | Col2 | Col3"
                 parts.append("\n".join(" | ".join(row) for row in rows))
         except Exception as e:
             log.debug(f"Table read error {csv_file}: {e}")
@@ -686,10 +696,6 @@ def load_tables(folder: Path) -> str:
 
 
 def load_infobox(folder: Path) -> str:
-    """
-    Scraper v2 saves structured key→value pairs as infobox.json.
-    Was completely ignored in v1 — now becomes its own chunk type.
-    """
     infobox_file = folder / "infobox.json"
     if not infobox_file.exists():
         return ""
@@ -702,6 +708,7 @@ def load_infobox(folder: Path) -> str:
 
 
 import concurrent.futures
+
 
 def _load_single_page(folder: Path) -> dict | None:
     if not folder.is_dir():
@@ -731,6 +738,7 @@ def _load_single_page(folder: Path) -> dict | None:
         "infobox_text": load_infobox(folder),
     }
 
+
 def load_pages() -> list[dict]:
     log.info(f"Starting to load pages from {CFG.data_path}...")
     if not CFG.data_path.exists():
@@ -740,10 +748,10 @@ def load_pages() -> list[dict]:
     pages = []
     skipped_noise = 0
     folders = list(CFG.data_path.iterdir())
-    
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=32) as executor:
         results = list(executor.map(_load_single_page, folders))
-        
+
     for res in results:
         if res is None:
             continue
@@ -755,10 +763,10 @@ def load_pages() -> list[dict]:
     log.info(f"Loaded {len(pages)} pages from {CFG.data_path} (skipped {skipped_noise} noise pages)")
     return pages
 
+
 # ================= BUILD VECTOR DB =================
 
 def _already_indexed(client: QdrantClient, collection_name: str, url: str) -> bool:
-    """Incremental indexing: skip pages whose URL is already in the DB."""
     try:
         result = client.scroll(
             collection_name=collection_name,
@@ -776,7 +784,6 @@ def _already_indexed(client: QdrantClient, collection_name: str, url: str) -> bo
 
 
 def _semantic_split(text: str, max_size: int, min_size: int) -> list[str]:
-    """Split text on paragraph/heading boundaries, keeping chunks within max_size."""
     sections = re.split(r"\n(?=#{1,3}\s)|\n\s*\n|\n(?=[A-Z][A-Za-z\s]{5,100}:)", text)
 
     chunks: list[str] = []
@@ -812,11 +819,6 @@ def _deterministic_id(seed: str) -> str:
 
 
 def _build_chunks(pages: list[dict]) -> tuple[list[str], list[dict], dict[str, str]]:
-    """
-    Returns (docs, metas, point_id_map).
-    point_id_map maps deterministic UUID string -> "parent" or "child".
-    Each meta dict now includes chunk_level and parent_point_id.
-    """
     docs: list[str] = []
     metas: list[dict] = []
     point_id_map: dict[str, str] = {}
@@ -885,10 +887,8 @@ def _build_chunks(pages: list[dict]) -> tuple[list[str], list[dict], dict[str, s
                 point_id_map[child_id] = "child"
 
         add_child_chunks(content, "text")
-
         if page["table_text"]:
             add_child_chunks(page["table_text"], "table")
-
         if page["infobox_text"]:
             add_child_chunks(page["infobox_text"], "infobox")
 
@@ -900,7 +900,6 @@ DB_SCHEMA_VERSION = "v4.0-kg-hierarchical"
 
 
 def _check_db_version(client: QdrantClient, collection_name: str) -> bool:
-    """Check if the existing DB was built with the current schema version."""
     try:
         result = client.scroll(collection_name=collection_name, limit=1)
         points = result[0]
@@ -924,11 +923,12 @@ def _check_db_version(client: QdrantClient, collection_name: str) -> bool:
     return True
 
 
-_EMBED_DIM = 384  # all-MiniLM-L6-v2 output dimension
+# BGE-M3 outputs 1024-dim embeddings (not 384 like MiniLM).
+# If you ever swap the embed model, update this constant to match.
+_EMBED_DIM = 384
 
 
 def _ensure_collection(client: QdrantClient, force_rebuild: bool) -> None:
-    """Create or recreate the Qdrant collection with dense + sparse vector config."""
     exists = client.collection_exists(CFG.collection_name)
 
     if force_rebuild and exists:
@@ -949,50 +949,28 @@ def _ensure_collection(client: QdrantClient, force_rebuild: bool) -> None:
                 "sparse": models.SparseVectorParams(),
             },
         )
-        client.create_payload_index(
-            collection_name=CFG.collection_name,
-            field_name="source",
-            field_schema=models.PayloadSchemaType.KEYWORD,
+        for field_name, schema in [
+            ("source", models.PayloadSchemaType.KEYWORD),
+            ("campus", models.PayloadSchemaType.KEYWORD),
+            ("entity_type", models.PayloadSchemaType.KEYWORD),
+            ("page_tier", models.PayloadSchemaType.KEYWORD),
+            ("chunk_level", models.PayloadSchemaType.KEYWORD),
+            ("parent_point_id", models.PayloadSchemaType.KEYWORD),
+            ("page_authority", models.PayloadSchemaType.FLOAT),
+        ]:
+            client.create_payload_index(
+                collection_name=CFG.collection_name,
+                field_name=field_name,
+                field_schema=schema,
+            )
+        log.info(
+            f"Created Qdrant collection '{CFG.collection_name}' "
+            f"with dense({_EMBED_DIM}d)+sparse vectors and v4.0 indexes."
         )
-        client.create_payload_index(
-            collection_name=CFG.collection_name,
-            field_name="campus",
-            field_schema=models.PayloadSchemaType.KEYWORD,
-        )
-        client.create_payload_index(
-            collection_name=CFG.collection_name,
-            field_name="entity_type",
-            field_schema=models.PayloadSchemaType.KEYWORD,
-        )
-        client.create_payload_index(
-            collection_name=CFG.collection_name,
-            field_name="page_tier",
-            field_schema=models.PayloadSchemaType.KEYWORD,
-        )
-        client.create_payload_index(
-            collection_name=CFG.collection_name,
-            field_name="page_authority",
-            field_schema=models.PayloadSchemaType.FLOAT,
-        )
-        client.create_payload_index(
-            collection_name=CFG.collection_name,
-            field_name="chunk_level",
-            field_schema=models.PayloadSchemaType.KEYWORD,
-        )
-        client.create_payload_index(
-            collection_name=CFG.collection_name,
-            field_name="parent_point_id",
-            field_schema=models.PayloadSchemaType.KEYWORD,
-        )
-        log.info(f"Created Qdrant collection '{CFG.collection_name}' with dense+sparse vectors and v4.0 indexes.")
 
 
 def build_db(force_rebuild: bool = False):
-    """
-    Build or incrementally update the vector DB.
-    Pass force_rebuild=True to wipe and re-embed everything.
-    """
-    global _sparse_vectorizer, _knowledge_graph
+    global _sparse_vectorizer, _knowledge_graph, _admission_profiles
 
     client = get_qdrant_client()
     _ensure_collection(client, force_rebuild)
@@ -1007,10 +985,11 @@ def build_db(force_rebuild: bool = False):
         log.error("No pages found — run the scraper first.")
         return
 
-    # --- Build Knowledge Graph from ALL pages (always, even incremental) ---
     log.info("Building Knowledge Graph...")
     _knowledge_graph = build_knowledge_graph(pages)
     _knowledge_graph.save(str(_KG_PATH))
+    _admission_profiles = getattr(_knowledge_graph, "admission_profiles", {}) or {}
+    save_admission_profiles(_admission_profiles, str(_ADMISSION_PROFILE_PATH))
     log.info(f"Knowledge Graph: {_knowledge_graph.stats()}")
 
     if force_rebuild:
@@ -1029,11 +1008,19 @@ def build_db(force_rebuild: bool = False):
     docs, metas, point_id_map = _build_chunks(new_pages)
     log.info(f"Chunks to embed: {len(docs)}")
 
-    log.info("Starting dense embeddings...")
+    log.info(f"Starting dense embeddings (batch={CFG.embed_batch}, device={CFG.torch_device})...")
     all_embeddings: list[list[float]] = []
     for i in range(0, len(docs), CFG.embed_batch):
-        batch = docs[i : i + CFG.embed_batch]
-        all_embeddings.extend(embedder.encode(batch, show_progress_bar=False).tolist())
+        batch = docs[i: i + CFG.embed_batch]
+        all_embeddings.extend(
+            embedder.encode(
+                batch,
+                batch_size=CFG.embed_batch,
+                show_progress_bar=False,
+                normalize_embeddings=True,
+                convert_to_numpy=True,
+            ).tolist()
+        )
         log.info(f"Dense embed: {min(i + CFG.embed_batch, len(docs))}/{len(docs)} chunks")
 
     log.info("Starting sparse embeddings...")
@@ -1047,7 +1034,6 @@ def build_db(force_rebuild: bool = False):
     _sparse_vectorizer = sparse_vec
     log.info(f"Sparse vectorizer fitted on {len(docs)} docs, vocab size: {len(sparse_vec._vocab)}")
 
-    # --- Upsert into Qdrant ---
     existing_count = get_collection_count()
     BATCH = 100
 
@@ -1067,16 +1053,15 @@ def build_db(force_rebuild: bool = False):
                     "document": docs[j],
                 },
             ))
-
         client.upsert(collection_name=CFG.collection_name, points=points)
         log.info(f"Upsert: {end}/{len(docs)} chunks")
 
     log.info(f"Indexed {len(docs)} chunks into Qdrant collection '{CFG.collection_name}'")
 
+
 # ================= RETRIEVE =================
 
 def _build_query_filter(campus: str | None) -> models.Filter | None:
-    """Build a Qdrant payload filter for campus-based queries."""
     if not campus or campus == "KTR":
         return None
     return models.Filter(must=[
@@ -1090,7 +1075,6 @@ def _build_query_filter(campus: str | None) -> models.Filter | None:
 def _qdrant_results_to_candidates(
     results, score_threshold: float
 ) -> list[tuple[str, dict, float]]:
-    """Convert Qdrant query results to (doc, meta, score) triples."""
     candidates = []
     for point in results.points:
         score = point.score or 0.0
@@ -1109,14 +1093,8 @@ def retrieve(
     boost_admission: bool = False,
     intent: dict | None = None,
 ) -> list[tuple[str, dict, float]]:
-    """
-    Returns (doc, metadata, score) triples.
-    Uses Qdrant hybrid search (dense + sparse via RRF).
-    Then reranks with CrossEncoder if available.
-    """
     return retrieve_with_overrides(
-        query=query, campus=campus, boost_admission=boost_admission,
-        intent=intent
+        query=query, campus=campus, boost_admission=boost_admission, intent=intent
     )
 
 
@@ -1130,15 +1108,15 @@ def retrieve_with_overrides(
     boost_admission: bool = False,
     intent: dict | None = None,
 ) -> list[tuple[str, dict, float]]:
-    """
-    Hybrid retrieval using Qdrant's query API with prefetch + RRF fusion.
-    Falls back to dense-only if sparse vectorizer is unavailable.
-    """
     client = get_qdrant_client()
     embedder = get_embedder()
     sparse_vec = get_sparse_vectorizer()
 
-    query_embed = embedder.encode([query]).tolist()[0]
+    query_embed = embedder.encode(
+        [query],
+        normalize_embeddings=True,
+        convert_to_numpy=True,
+    ).tolist()[0]
 
     n = retrieval_limit or CFG.retrieval_limit
     query_filter = _build_query_filter(campus)
@@ -1153,16 +1131,10 @@ def retrieve_with_overrides(
         sparse_query = sparse_vec.encode_query(query)
         prefetch = [
             models.Prefetch(
-                query=query_embed,
-                using="dense",
-                limit=prefetch_n,
-                filter=query_filter,
+                query=query_embed, using="dense", limit=prefetch_n, filter=query_filter,
             ),
             models.Prefetch(
-                query=sparse_query,
-                using="sparse",
-                limit=prefetch_n,
-                filter=query_filter,
+                query=sparse_query, using="sparse", limit=prefetch_n, filter=query_filter,
             ),
         ]
         results = client.query_points(
@@ -1228,10 +1200,7 @@ def retrieve_with_overrides(
         is_role_query = bool(intent and intent.get("is_role_query"))
         for i, s in enumerate(scores):
             authority = candidates[i][1].get("page_authority", 0.5)
-            if is_role_query:
-                scores[i] = s * (0.5 + authority)
-            else:
-                scores[i] = s * (0.8 + 0.2 * authority)
+            scores[i] = s * (0.5 + authority) if is_role_query else s * (0.8 + 0.2 * authority)
 
         candidates = sorted(
             zip([c[0] for c in candidates], [c[1] for c in candidates], scores),
@@ -1249,10 +1218,6 @@ def _fetch_parent_context(
     client: QdrantClient,
     chunks: list[tuple[str, dict, float]],
 ) -> list[tuple[str, dict, float]]:
-    """
-    For child chunks, fetch their parent chunk and prepend to the result list.
-    This gives the LLM the full page overview alongside the matched detail chunk.
-    """
     parent_ids_needed: set[str] = set()
     existing_sources: set[str] = set()
 
@@ -1279,7 +1244,7 @@ def _fetch_parent_context(
         )
         parent_lookup: dict[str, tuple[str, dict]] = {}
         for point in result[0]:
-            payload = point.payload or {}
+            payload = dict(point.payload or {})
             source = payload.get("source", "")
             parent_lookup[source] = (payload.pop("document", ""), payload)
     except Exception as e:
@@ -1310,10 +1275,6 @@ def _diverse_top_k(
     k: int,
     max_per_source: int = 2,
 ) -> list[tuple[str, dict, float]]:
-    """
-    Pick top-k chunks while capping how many come from a single source URL.
-    Prevents context from being dominated by one page's repeated chunks.
-    """
     selected: list[tuple[str, dict, float]] = []
     source_counts: dict[str, int] = {}
 
@@ -1329,26 +1290,28 @@ def _diverse_top_k(
 
     return selected
 
+
 # ================= PROMPT =================
 
-SYSTEM_PROMPT = """You are the official SRM Institute of Science and Technology (SRMIST) assistant.
-Your primary campus is Kattankulathur (KTR), but you can also answer about other SRMIST campuses when asked.
-You help with ANY question about SRMIST — admissions, fees, courses, departments, events, campus life, placements, hostels, cultural fests, research, faculty, sports, and more.
-You have particular expertise in admissions processes, eligibility, entrance exams (SRMJEEE), and fee structures.
+SYSTEM_PROMPT = """You are the official SRMIST (SRM Institute of Science and Technology) virtual assistant for the Kattankulathur campus.
 
-RULES:
-- Answer ONLY from the provided context and Knowledge Graph data. Every factual claim MUST be supported by the context.
-- If the context genuinely contains no useful information for the question, say: "I don't have enough information about this. Please visit https://www.srmist.edu.in or contact admissions."
-- Do NOT output fallback text when the context contains relevant information — answer the question instead.
-- Do NOT include a "Sources:" section in your answer — sources are handled separately.
-- Be concise and factual. Use bullet points for lists.
-- When listing items (departments, programs, events), present them as a clean bulleted list.
-- When answering about fees or eligibility, include specific numbers and criteria from the context.
+YOUR TASK: Answer the student's question using ONLY the context provided below. Write a complete, helpful, well-structured answer.
 
-FAITHFULNESS GUARDRAILS:
-- NEVER invent names, fees, dates, percentages, or phone numbers not present in the context.
-- When multiple sources mention different people for the same role (e.g., HOD), prefer the information from the main department/school overview page (higher authority source, typically shorter URL).
-- If the Knowledge Graph section is present, use it as the primary reference for entity names, roles, and organizational structure."""
+RESPONSE STYLE:
+- Write in a warm, professional tone — like a knowledgeable senior student helping a newcomer.
+- Give COMPLETE answers. Do not cut short. If the context has details, include them ALL.
+- Use **bold** for key terms, names, and important values (fees, dates, percentages).
+- Use bullet points (- ) for lists of 3+ items.
+- Use numbered steps (1. 2. 3.) for processes and procedures.
+- Include specific numbers: fees in INR, percentages, dates, phone numbers — whatever the context provides.
+- End with a helpful next-step when appropriate (e.g., "You can apply at..." or "For more details, visit...").
+
+STRICT RULES:
+- Answer ONLY from the provided context and Knowledge Graph data. Every claim must be grounded.
+- If the context has NO relevant information, respond exactly: "I don't have enough information about this. Please visit https://www.srmist.edu.in or contact the SRM admissions office."
+- Do NOT add a "Sources:" section — sources are handled by the system.
+- NEVER invent names, fees, dates, or phone numbers not in the context.
+- If Knowledge Graph data is present, treat it as the primary authority for names, roles, and org structure."""
 
 _SOURCE_TAIL_RE = re.compile(
     r"(?:\n|^)\s*\*{0,2}sources?\*{0,2}\s*:.*", re.I | re.DOTALL
@@ -1362,11 +1325,6 @@ _FALLBACK_RE = re.compile(
 
 
 def clean_answer_text(answer: str) -> str:
-    """
-    1) Strip trailing 'Sources:' sections (handled by UI).
-    2) Remove fallback sentences when a substantive answer exists.
-       Works even when the fallback spans multiple lines.
-    """
     cleaned = (answer or "").strip()
     if not cleaned:
         return cleaned
@@ -1383,62 +1341,42 @@ def clean_answer_text(answer: str) -> str:
     if len(candidate) >= 40:
         cleaned = candidate
 
-    # Remove leftover tail fragments from partial fallback stripping.
-    cleaned = re.sub(r"\s*(?:please\s+visit\s+)?or\s+contact\s+(?:the\s+)?(?:srm\s+)?admissions?\.?\s*$", "", cleaned, flags=re.I).strip()
+    cleaned = re.sub(
+        r"\s*(?:please\s+visit\s+)?or\s+contact\s+(?:the\s+)?(?:srm\s+)?admissions?\.?\s*$",
+        "",
+        cleaned,
+        flags=re.I,
+    ).strip()
 
     return cleaned
 
 
 _QUERY_TYPE_INSTRUCTIONS = {
     "listing": (
-        "The user is asking for a LIST of items. "
-        "Present your answer as a clean bulleted list. "
-        "Include ALL items found in the context — do not omit any.\n\n"
-        "Example:\n"
-        "Q: What departments are under the School of Computing?\n"
-        "A: The School of Computing at SRMIST includes:\n"
-        "- Computing Technologies\n"
-        "- Networking and Communications\n"
-        "- Computational Intelligence\n"
-        "- Data Science and Business Systems\n\n"
-        "Note: This list is based on available context and may not be exhaustive."
+        "FORMAT: The student wants a LIST. "
+        "Write a brief intro sentence, then list EVERY item from the context as bullet points. "
+        "Do NOT skip any items. Add a note if the list may not be exhaustive."
     ),
     "procedural": (
-        "The user is asking about a PROCESS or STEPS. "
-        "Present your answer as numbered steps in order. "
-        "Include specific requirements, exams, or documents mentioned in the context.\n\n"
-        "Example:\n"
-        "Q: How do I apply for B.Tech at SRMIST?\n"
-        "A:\n"
-        "1. Register for SRMJEEE (SRM Joint Engineering Entrance Examination) on the official portal.\n"
-        "2. Pay the application fee and fill in your academic details.\n"
-        "3. Appear for the SRMJEEE entrance exam.\n"
-        "4. Attend the counselling session based on your rank.\n"
-        "5. Complete document verification and pay the admission fee."
+        "FORMAT: The student wants STEPS or a PROCESS. "
+        "Write numbered steps in order (1. 2. 3. ...). "
+        "Include specific requirements, documents, fees, exam names, and deadlines from the context."
     ),
     "comparison": (
-        "The user is asking for a COMPARISON. "
-        "Present similarities and differences clearly. "
-        "Use a structured format (bullet points or short paragraphs for each aspect)."
+        "FORMAT: The student wants a COMPARISON. "
+        "Structure your answer with clear sections for each item being compared. "
+        "Highlight key differences and similarities using bullet points."
     ),
     "person_lookup": (
-        "The user is asking about a SPECIFIC PERSON (faculty, HOD, dean, chairperson). "
-        "Include their full name, designation, department, and any contact info from the context.\n\n"
-        "IMPORTANT: If multiple sources mention different people for the same role, "
-        "prefer the information from the MAIN department/school overview page or the "
-        "'Meet our Chairs, Deans & HoDs' page — these have the most current data. "
-        "Faculty profile subpages may contain outdated role information.\n\n"
-        "Example:\n"
-        "Q: Who is the HOD of Computer Science?\n"
-        "A: Dr. Muthulakshmi P is the Head of the Department of Computer Science, "
-        "College of Science & Humanities, SRMIST Kattankulathur."
+        "FORMAT: The student is asking about a PERSON (faculty, HOD, dean). "
+        "State their **full name**, **designation**, **department**, and any contact info found. "
+        "If Knowledge Graph data is present, use it as the primary source for the person's name and role. "
+        "If multiple sources conflict, prefer the department overview page over individual profile pages."
     ),
     "factual": (
-        "The user is asking a FACTUAL question. "
-        "Give a direct, specific answer. Include numbers, dates, or criteria from the context.\n\n"
-        "Example:\n"
-        "Q: What is the fee for B.Tech CSE?\n"
-        "A: The B.Tech CSE tuition fee is Rs. 2,50,000 per semester (as per the fee structure available in context)."
+        "FORMAT: Give a direct, specific answer. "
+        "Lead with the key fact, then add supporting details. "
+        "Include exact numbers (fees in INR, dates, percentages, contact numbers) from the context."
     ),
 }
 
@@ -1448,13 +1386,10 @@ def compress_chunks(
     query: str,
     threshold: float = 0.25,
 ) -> list[tuple[str, dict, float]]:
-    """
-    For each chunk, keep only the sentences most relevant to the query.
-    Short chunks (<=3 sentences) are kept as-is.
-    Parent chunks (overview) are never compressed.
-    """
     embedder = get_embedder()
-    query_embed = embedder.encode([query])[0]
+    query_embed = embedder.encode(
+        [query], normalize_embeddings=True, convert_to_numpy=True
+    )[0]
     compressed = []
 
     for doc, meta, score in chunks:
@@ -1467,7 +1402,9 @@ def compress_chunks(
             compressed.append((doc, meta, score))
             continue
 
-        sent_embeds = embedder.encode(sentences)
+        sent_embeds = embedder.encode(
+            sentences, normalize_embeddings=True, convert_to_numpy=True
+        )
         similarities = np.dot(sent_embeds, query_embed) / (
             np.linalg.norm(sent_embeds, axis=1) * np.linalg.norm(query_embed) + 1e-8
         )
@@ -1504,17 +1441,20 @@ def build_prompt(
             "If context contradicts the KG data, prefer the KG data for role/listing information.\n"
         )
 
-    return f"""{SYSTEM_PROMPT}
+    parts = [SYSTEM_PROMPT, ""]
+    if type_instruction:
+        parts.append(type_instruction)
+        parts.append("")
+    if kg_section:
+        parts.append(kg_section)
+    parts.append("=== CONTEXT ===")
+    parts.append(context)
+    parts.append("")
+    parts.append(f"=== STUDENT'S QUESTION ===\n{question}")
+    parts.append("")
+    parts.append("=== YOUR ANSWER (be thorough, use formatting, include all relevant details) ===")
+    return "\n".join(parts)
 
-{type_instruction}
-{kg_section}
-=== CONTEXT ===
-{context}
-
-=== QUESTION ===
-{question}
-
-=== ANSWER ==="""
 
 # ================= LLM =================
 
@@ -1523,15 +1463,20 @@ class LLMError(Exception):
 
 
 def call_llm(prompt: str, stream: bool = CFG.llm_stream) -> str:
-    """
-    Call the LLM and return the text response.
-    Raises LLMError on connection/HTTP failures so callers can
-    distinguish "LLM broke" from "no relevant context."
-    """
     try:
         r = requests.post(
             CFG.llm_url,
-            json={"model": CFG.llm_model, "prompt": prompt, "stream": stream},
+            json={
+                "model": CFG.llm_model,
+                "prompt": prompt,
+                "stream": stream,
+                "options": {
+                    "num_predict": CFG.llm_num_predict,
+                    "temperature": 0.3,
+                    "top_p": 0.9,
+                    "repeat_penalty": 1.15,
+                },
+            },
             stream=stream,
             timeout=120,
         )
@@ -1547,9 +1492,6 @@ def call_llm(prompt: str, stream: bool = CFG.llm_stream) -> str:
             try:
                 token_data = json.loads(line)
                 token = token_data.get("response", "")
-                # Streaming is only for console visibility (the API response is returned at the end).
-                # On Windows, the default console encoding may be cp1252 and can crash on '₹'.
-                # We therefore print defensively with replacement on encoding errors.
                 try:
                     print(token, end="", flush=True)
                 except UnicodeEncodeError:
@@ -1567,23 +1509,17 @@ def call_llm(prompt: str, stream: bool = CFG.llm_stream) -> str:
 
     except requests.ConnectionError as e:
         log.error(f"LLM connection failed: {e}")
-        raise LLMError(
-            "The language model is currently unavailable. Please try again in a moment."
-        ) from e
+        raise LLMError("The language model is currently unavailable. Please try again in a moment.") from e
     except requests.Timeout as e:
         log.error(f"LLM request timed out: {e}")
-        raise LLMError(
-            "The language model took too long to respond. Please try again."
-        ) from e
+        raise LLMError("The language model took too long to respond. Please try again.") from e
     except requests.RequestException as e:
         log.error(f"LLM request failed: {e}")
-        raise LLMError(
-            "An error occurred while generating the answer. Please try again later."
-        ) from e
+        raise LLMError("An error occurred while generating the answer. Please try again later.") from e
+
 
 # ================= RAG QUERY =================
 
-# Common greetings to intercept before hitting the vector DB
 _GREETINGS = {"hi", "hello", "hey", "hii", "helo", "yo", "sup", "greetings"}
 
 _FALLBACK_NO_CONTEXT = (
@@ -1597,27 +1533,16 @@ _FALLBACK_LLM_ERROR = (
     "Please try again in a moment. If the problem persists, visit https://www.srmist.edu.in for help."
 )
 
-_ROLE_QUERY_SIGNAL = re.compile(
-    r"\b(hod|head\s+of\s+(?:the\s+)?department|head\s+of|chairperson|chair\s+person|department\s+head)\b",
-    re.I,
-)
-
-_ROLE_QUERY_HINTS = (
-    "head of department HOD chairperson faculty profile contact email phone department office"
-)
-
 _ADMISSION_DATE_RETRY_HINTS = (
     "SRMJEEE B.Tech UG admission important dates application opening date "
     "registration start last date to apply admission timeline schedule phase"
 )
-
 
 _ADMISSION_QUERY_SIGNAL = re.compile(
     r"\b(admission|admissions|fee|fees|eligibility|srmjeee|entrance|scholarship|apply|application|"
     r"cutoff|cut[\s-]off|intake|counselling|seat)\b",
     re.I,
 )
-
 
 _PRONOUN_PATTERN = re.compile(
     r"\b(he|she|they|it|this|that|his|her|their|its|them|those|the same|above|previous)\b",
@@ -1626,7 +1551,6 @@ _PRONOUN_PATTERN = re.compile(
 
 
 def _resolve_with_context(question: str, conversation_context: str) -> str:
-    """If the question contains pronouns and we have conversation history, prepend context."""
     if not conversation_context:
         return question
     if not _PRONOUN_PATTERN.search(question):
@@ -1640,14 +1564,9 @@ def query_rag(
     campus: str | None = None,
     conversation_context: str = "",
 ) -> dict:
-    """
-    Returns {"answer": str, "sources": list[str], "intent": str}
-    so main.py can unpack answer, sources, and intent independently.
-    """
     log.info(f"Query: {question!r}")
     t0 = time.time()
 
-    # Intercept greetings — no point hitting the vector DB for these
     if question.lower().strip().rstrip("!?.") in _GREETINGS:
         return {
             "answer": (
@@ -1658,25 +1577,22 @@ def query_rag(
             "intent": "greeting",
         }
 
-    # ---- Context resolution for follow-up queries ----
     contextualized_q = _resolve_with_context(question, conversation_context)
     if contextualized_q != question:
-        log.info(f"Resolved pronouns with conversation context")
+        log.info("Resolved pronouns with conversation context")
 
-    # ---- Preprocessing: expand abbreviations + synonym hints ----
     processed_question = preprocess_query(contextualized_q)
     log.info(f"Preprocessed: {processed_question!r}")
 
-    # Intent detection on the *expanded* query so abbreviations are resolved
     intent = detect_intent(processed_question)
     retrieval_query = build_retrieval_query(processed_question, intent)
 
     is_admission_query = bool(_ADMISSION_QUERY_SIGNAL.search(processed_question))
     query_type = intent.get("query_type", "factual")
 
-    # ---- Knowledge Graph lookup (before vector search) ----
     kg_grounding: str = ""
     kg = get_knowledge_graph()
+
     if kg:
         if query_type == "listing":
             kg_answer = kg.answer_listing_query(processed_question)
@@ -1689,75 +1605,61 @@ def query_rag(
                 kg_grounding = kg_answer
                 log.info(f"KG role answer found: {kg_grounding}")
 
+    if not kg_grounding and (is_admission_query or intent.get("is_how_to_apply_query")):
+        admission_profiles = get_admission_profiles()
+        if kg and admission_profiles:
+            structured_admission = answer_admission_question(
+                processed_question,
+                campus=campus,
+                kg=kg,
+                profiles=admission_profiles,
+            )
+            if structured_admission:
+                log.info("Structured admission answer found.")
+                return structured_admission
+
     chunks = retrieve(
-        retrieval_query, campus=campus, boost_admission=is_admission_query,
-        intent=intent,
+        retrieval_query, campus=campus, boost_admission=is_admission_query, intent=intent,
     )
     chunks = filter_chunks_for_intent(chunks, intent, processed_question)
 
-    # ---- Fallback: no relevant context found ----
     if not chunks:
         if kg_grounding:
             log.info("No vector results but KG has an answer; using KG-only response.")
-            return {
-                "answer": kg_grounding,
-                "sources": [],
-                "intent": query_type,
-            }
+            return {"answer": kg_grounding, "sources": [], "intent": query_type}
         log.warning(f"No context retrieved for: {question!r}")
-        return {
-            "answer": _FALLBACK_NO_CONTEXT,
-            "sources": [],
-            "intent": "no_context",
-        }
+        return {"answer": _FALLBACK_NO_CONTEXT, "sources": [], "intent": "no_context"}
 
     log.info(f"Retrieved {len(chunks)} chunks in {time.time() - t0:.2f}s")
 
-    seen = set()
-    sources = []
+    seen: set[str] = set()
+    sources: list[str] = []
     for _, meta, _ in chunks:
         url = meta.get("source", "")
         if url and url not in seen:
             seen.add(url)
             sources.append(url)
 
-    # ---- Grounding Guardrail for Role Queries ----
     if intent.get("is_role_query") and not kg_grounding:
         context_text = " ".join(doc for doc, _, _ in chunks)
         if not _ROLE_QUERY_SIGNAL.search(context_text):
-            log.warning(f"Role query grounding failed: no role assertion found in context for {question!r}")
-            return {
-                "answer": _FALLBACK_NO_CONTEXT,
-                "sources": [],
-                "intent": "no_context",
-            }
+            log.warning(f"Role query grounding failed for {question!r}")
+            return {"answer": _FALLBACK_NO_CONTEXT, "sources": [], "intent": "no_context"}
 
-    # ---- Contextual compression: keep only query-relevant sentences ----
     chunks = compress_chunks(chunks, processed_question)
 
-    # ---- LLM call with error handling ----
     prompt = build_prompt(question, chunks, query_type=query_type, kg_grounding=kg_grounding)
     try:
         answer = clean_answer_text(call_llm(prompt))
     except LLMError as e:
         log.error(f"LLM failed for query: {question!r} — {e}")
-        return {
-            "answer": _FALLBACK_LLM_ERROR,
-            "sources": sources,
-            "intent": "error",
-        }
+        return {"answer": _FALLBACK_LLM_ERROR, "sources": sources, "intent": "error"}
 
     if not answer or not answer.strip():
         log.warning(f"LLM returned empty answer for: {question!r}")
-        return {
-            "answer": _FALLBACK_LLM_ERROR,
-            "sources": sources,
-            "intent": "error",
-        }
+        return {"answer": _FALLBACK_LLM_ERROR, "sources": sources, "intent": "error"}
 
-    # If the LLM responded with the built-in "no info" fallback despite having context,
-    # do one targeted retry with role-specific query expansion and a slightly broader
-    # retrieval window. This helps questions like "who is the head of cintel".
+    # Retry 1: role query fallback
     if _FALLBACK_RE.search(answer) and _ROLE_QUERY_SIGNAL.search(processed_question):
         log.info("LLM fallback detected; retrying with role-expanded retrieval query.")
         retry_query = f"{processed_question} {_ROLE_QUERY_HINTS}"
@@ -1770,14 +1672,9 @@ def query_rag(
         retry_chunks = filter_chunks_for_intent(retry_chunks, intent, processed_question)
 
         if retry_chunks:
-            retry_sources_seen = set()
-            retry_sources: list[str] = []
-            for _, meta, _ in retry_chunks:
-                url = meta.get("source", "")
-                if url and url not in retry_sources_seen:
-                    retry_sources_seen.add(url)
-                    retry_sources.append(url)
-
+            retry_sources = list(dict.fromkeys(
+                m.get("source", "") for _, m, _ in retry_chunks if m.get("source")
+            ))
             retry_prompt = build_prompt(question, retry_chunks, query_type=query_type)
             try:
                 retry_answer = clean_answer_text(call_llm(retry_prompt))
@@ -1789,6 +1686,7 @@ def query_rag(
                 answer = retry_answer
                 sources = retry_sources
 
+    # Retry 2: admission date fallback
     if _FALLBACK_RE.search(answer) and intent["is_admission_date_query"]:
         log.info("LLM fallback detected; retrying with admission-date-expanded retrieval query.")
         retry_query = f"{processed_question} {_ADMISSION_DATE_RETRY_HINTS}"
@@ -1801,14 +1699,9 @@ def query_rag(
         retry_chunks = filter_chunks_for_intent(retry_chunks, intent, processed_question)
 
         if retry_chunks:
-            retry_sources_seen = set()
-            retry_sources: list[str] = []
-            for _, meta, _ in retry_chunks:
-                url = meta.get("source", "")
-                if url and url not in retry_sources_seen:
-                    retry_sources_seen.add(url)
-                    retry_sources.append(url)
-
+            retry_sources = list(dict.fromkeys(
+                m.get("source", "") for _, m, _ in retry_chunks if m.get("source")
+            ))
             retry_prompt = build_prompt(question, retry_chunks, query_type=query_type)
             try:
                 retry_answer = clean_answer_text(call_llm(retry_prompt))
@@ -1820,26 +1713,22 @@ def query_rag(
                 answer = retry_answer
                 sources = retry_sources
 
-    # Guardrail: prevent age cut-off dates from being misreported as admissions opening dates.
+    # Guardrail: age cut-off date vs admission opening date
     if intent["is_admission_date_query"] and re.search(r"\b31st\b.*\bjuly\b", answer, re.I):
         context_text = " ".join(doc for doc, _, _ in chunks)
-        has_only_eligibility_signals = bool(_ELIGIBILITY_SIGNAL.search(context_text)) and not bool(
-            _ADMISSION_DATE_SIGNAL.search(context_text)
-        )
-        if has_only_eligibility_signals:
-            answer = (
-                "I could not find an explicit admissions opening date in the available SRMIST context. "
-                "The 31st July mention is an age-eligibility criterion, not an admission opening date. "
-                "Please check the latest admissions timeline on https://www.srmist.edu.in/admission-india/."
+        if bool(_ELIGIBILITY_SIGNAL.search(context_text)) and not bool(_ADMISSION_DATE_SIGNAL.search(context_text)):
+            answer += (
+                "\n\n**Note:** The 31st July reference above is an age-eligibility criterion, "
+                "not an admission opening date. For the latest admissions timeline, "
+                "please visit https://www.srmist.edu.in/admission-india/."
             )
 
     if intent["is_how_to_apply_query"] and intent["is_btech_query"]:
-        answer_has_cet_only = _CET_SIGNAL.search(answer) and not _SRMJEEE_SIGNAL.search(answer)
-        if answer_has_cet_only:
-            answer = (
-                "For B.Tech admissions at SRMIST, please follow the SRMJEEE (UG) route on the official admissions portal. "
-                "The CET instructions in retrieved context appear to be from a different admission flow. "
-                "Please verify the latest B.Tech application steps at https://www.srmist.edu.in/admission-india/."
+        if _CET_SIGNAL.search(answer) and not _SRMJEEE_SIGNAL.search(answer):
+            answer += (
+                "\n\n**Note:** For B.Tech admissions at SRMIST, the primary route is through "
+                "**SRMJEEE (UG)**. Please verify the latest B.Tech application steps at "
+                "https://www.srmist.edu.in/admission-india/."
             )
 
     if intent["is_admission_date_query"]:
@@ -1853,6 +1742,7 @@ def query_rag(
 
     log.info(f"Total query time: {time.time() - t0:.2f}s | Intent: {detected_intent}")
     return {"answer": answer, "sources": sources, "intent": detected_intent}
+
 
 # ================= MAIN =================
 
@@ -1869,6 +1759,6 @@ if __name__ == "__main__":
         build_db(force_rebuild=args.rebuild)
 
     if args.query:
-        answer = query_rag(args.query)
-        if not CFG.llm_stream:   # streaming already printed above
-            print(answer)
+        result = query_rag(args.query)
+        if not CFG.llm_stream:
+            print(result)
