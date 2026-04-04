@@ -3,7 +3,7 @@
 ## 1. Project Overview
 * **Purpose:** This project is a full-stack SRMIST assistant that answers student questions about admissions, fees, programs, departments, campus life, placements, research, and institutional structure.
 * **Current Scope:** The chatbot is no longer just a basic admissions FAQ bot. The current version supports broader SRMIST knowledge retrieval, role lookups such as HOD and dean queries, department and school listing queries, and follow-up questions within the same session.
-* **Version Context:** The backend is currently on **v4.0**, with major upgrades around hybrid retrieval, knowledge graph grounding, hierarchical chunking, and answer guardrails.
+* **Version Context:** The backend is currently on **v4.1**, with major upgrades around hybrid retrieval, knowledge graph grounding, robust nested settings configuration, query intent role extraction loops, and strong answer guardrails.
 * **Main Features & Capabilities:**
   * **Async SRM website scraper:** Builds and refreshes a local SRM corpus from sitemap-driven crawling.
   * **Hybrid RAG retrieval:** Combines dense embeddings and sparse BM25-style search in Qdrant using Reciprocal Rank Fusion (RRF).
@@ -82,8 +82,8 @@
   * `scraper.py`: Async sitemap scraper that saves cleaned content, metadata, tables, and infobox data.
   * `evaluate.py`: Offline evaluation runner against test queries.
 * **`frontend/`**
-  * `src/pages/Index.tsx`: Main chat experience, campus selector, prompt suggestions, session handling, answer rendering, and source UI.
-  * `src/components/ui/`: UI primitives generated from the project's component setup.
+  * `src/pages/Index.tsx`: Main standalone chat experience. Contains campus selector, prompt suggestions, markdown rendering, and local session handling.
+  * `src/components/ui/`: Contains only essential core UI primitives (like `select.tsx`), with all unused Shadcn code pruned.
   * `package.json`: Frontend scripts and dependencies.
 * **Project-Level Assets**
   * `backend/data/srm_docs/`: Scraped SRM page data.
@@ -132,7 +132,7 @@
   * strips noisy inline source blocks from raw model output,
   * shows citations in a dedicated expandable sources section.
 * **Controls:** Supports new chat reset, prompt refresh, Enter-to-send, and Shift+Enter for multi-line input.
-* **Current Implementation Note:** The main chat experience is concentrated in `frontend/src/pages/Index.tsx`; some older demo-style chat components still exist in `frontend/src/components/` but are not the main production flow.
+* **Current Implementation Note:** The main chat experience is concentrated entirely in `frontend/src/pages/Index.tsx`. All older legacy chat components and unused Shadcn UI libraries were aggressively pruned to maintain a minimalistic footprint.
 
 ## 8. API, Data Models, and Storage
 * **Primary Endpoint:** `POST /chat`

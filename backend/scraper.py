@@ -33,18 +33,6 @@ from urllib.robotparser import RobotFileParser
 class Config:
     sitemap_index: str = "https://www.srmist.edu.in/sitemap.xml"
     base_domain: str = "www.srmist.edu.in"
-    allowed_domains: tuple[str, ...] = (
-        "www.srmist.edu.in",
-        "applications.srmist.edu.in",
-        "intlapplications.srmist.edu.in",
-    )
-    seed_urls: tuple[str, ...] = (
-        "https://applications.srmist.edu.in/btech",
-        "https://applications.srmist.edu.in/m-tech",
-        "https://applications.srmist.edu.in/architecture-and-design",
-        "https://applications.srmist.edu.in/m-arch-m-des",
-        "https://intlapplications.srmist.edu.in/international-application-2026",
-    )
     base_dir: Path = Path(__file__).resolve().parent
     data_dir: Path = field(init=False)
 
@@ -131,15 +119,6 @@ def load_robots(base_url: str, user_agent: str) -> Optional[RobotFileParser]:
         log.warning(f"Could not load robots.txt: {e}")
         return None
 
-
-def load_robots_for_domains(domains: tuple[str, ...], user_agent: str) -> dict[str, RobotFileParser]:
-    robots: dict[str, RobotFileParser] = {}
-    for domain in domains:
-        parser = load_robots(f"https://{domain}", user_agent)
-        if parser:
-            robots[domain] = parser
-    return robots
-
 # ================= ASYNC FETCH =================
 
 async def fetch(session: aiohttp.ClientSession, url: str) -> Optional[str]:
@@ -194,7 +173,6 @@ async def get_urls(session: aiohttp.ClientSession) -> list[str]:
         except ET.ParseError as e:
             log.warning(f"Sitemap parse error: {e}")
 
-    urls.update(CFG.seed_urls)
     log.info(f"Total URLs discovered: {len(urls)}")
     return list(urls)
 
@@ -225,12 +203,11 @@ def extract_meta(soup: BeautifulSoup) -> dict:
 def extract_links(soup: BeautifulSoup, base_url: str) -> list[str]:
     """Extract all internal links from a page."""
     links = []
-    page_host = urlparse(base_url).netloc or CFG.base_domain
     for a in soup.find_all("a", href=True):
         href = a["href"].strip()
         if href.startswith("/"):
-            href = f"https://{page_host}{href}"
-        if any(domain in href for domain in CFG.allowed_domains) and href.startswith("http"):
+            href = f"https://{CFG.base_domain}{href}"
+        if CFG.base_domain in href and href.startswith("http"):
             links.append(href)
     return list(set(links))
 
@@ -312,14 +289,12 @@ async def process_url(
     session: aiohttp.ClientSession,
     url: str,
     progress: Progress,
-    robots: dict[str, RobotFileParser],
+    robots: Optional[RobotFileParser],
     semaphore: asyncio.Semaphore,
 ):
     async with semaphore:
         # Robots check
-        host = urlparse(url).netloc.lower()
-        parser = robots.get(host)
-        if parser and not parser.can_fetch(CFG.user_agent, url):
+        if robots and not robots.can_fetch(CFG.user_agent, url):
             log.debug(f"[ROBOTS] Disallowed: {url}")
             progress.update("skipped")
             return
@@ -361,13 +336,13 @@ async def main():
 
     async with aiohttp.ClientSession(headers=headers, connector=connector) as session:
         # Load robots.txt
-        robots: dict[str, RobotFileParser] = {}
+        robots = None
         if CFG.respect_robots:
-            robots = load_robots_for_domains(CFG.allowed_domains, CFG.user_agent)
+            robots = load_robots(f"https://{CFG.base_domain}", CFG.user_agent)
 
         # Discover URLs
         urls = await get_urls(session)
-        urls = [u for u in urls if any(domain in u for domain in CFG.allowed_domains)][: CFG.max_urls]
+        urls = [u for u in urls if CFG.base_domain in u][: CFG.max_urls]
         log.info(f"Queued {len(urls)} URLs (max={CFG.max_urls})")
 
         progress = Progress(total=len(urls))

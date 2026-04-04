@@ -16,6 +16,7 @@ interface Message {
   campus?: string | null;
   program?: string | null;
   sources?: ApiSource[];
+  confidence?: number | null;
 }
 
 interface ApiSource {
@@ -30,6 +31,7 @@ interface ChatApiResponse {
   intent?: string;
   campus?: string | null;
   program?: string | null;
+  confidence?: number | null;
 }
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
@@ -209,11 +211,18 @@ const Index = () => {
     setIsTyping(true);
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120_000);
       const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: userText, campus: selectedCampus, session_id: sessionId }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
+      if (!res.ok) {
+        throw new Error(`Server error: ${res.status}`);
+      }
       const data: ChatApiResponse = await res.json();
       const cleanedResponse = stripInlineSourcesBlock(data.response || "No response from server.");
       setMessages((prev) => [
@@ -226,12 +235,17 @@ const Index = () => {
           campus: data.campus,
           program: data.program,
           sources: normalizeSources(data.sources),
+          confidence: data.confidence,
         },
       ]);
-    } catch {
+    } catch (err) {
+      const message =
+        err instanceof DOMException && err.name === "AbortError"
+          ? "The request timed out. The server may be busy — please try again."
+          : "Cannot connect to SRM server. Please try again.";
       setMessages((prev) => [
         ...prev,
-        { id: Date.now() + 1, content: "Cannot connect to SRM server. Please try again.", isUser: false },
+        { id: Date.now() + 1, content: message, isUser: false },
       ]);
     }
 
@@ -377,7 +391,7 @@ const Index = () => {
             <div className="relative flex-1 min-h-0">
               <div
                 ref={scrollRef}
-                className="h-full overflow-y-auto no-scrollbar space-y-4 py-4 scroll-smooth"
+                className="h-full overflow-y-auto styled-scrollbar space-y-4 py-4 scroll-smooth"
               >
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex flex-col ${msg.isUser ? "items-end" : "items-start"}`}>
@@ -391,7 +405,7 @@ const Index = () => {
                       />
                     )}
                     <div
-                      className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                      className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed break-words ${
                         msg.isUser
                           ? "bg-blue-50 text-gray-900 rounded-br-sm"
                           : "bg-white text-gray-900 shadow-sm border border-gray-100 rounded-bl-sm"
@@ -400,8 +414,24 @@ const Index = () => {
                       {msg.isUser ? msg.content : renderMarkdown(msg.content, msg.sources)}
                     </div>
                   </div>
+                  {!msg.isUser && msg.confidence != null && (
+                    <div className="ml-9 mt-1 flex items-center gap-1.5">
+                      <div
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          msg.confidence >= 0.7
+                            ? "bg-green-500"
+                            : msg.confidence >= 0.4
+                            ? "bg-yellow-500"
+                            : "bg-red-400"
+                        }`}
+                      />
+                      <span className="text-[10px] text-gray-400">
+                        {Math.round(msg.confidence * 100)}% confidence
+                      </span>
+                    </div>
+                  )}
                   {!msg.isUser && msg.sources && msg.sources.length > 0 && (
-                    <details className="mt-2 px-2 group ml-9 max-w-[80%]">
+                    <details className="mt-1 px-2 group ml-9 max-w-[80%]">
                       <summary className="cursor-pointer list-none text-[11px] text-gray-500 hover:text-gray-700 select-none inline-flex items-center gap-1">
                         <span className="inline-block transition-transform group-open:rotate-90">▶</span>
                         Sources ({msg.sources.length})

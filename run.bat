@@ -6,13 +6,16 @@ cd /d "%~dp0"
 set DO_PAUSE=1
 if /i "%~1"=="--nopause" set DO_PAUSE=0
 
+REM 🔥 CHANGE MODEL HERE (ONLY THIS LINE IN FUTURE)
+set MODEL_NAME=gemma3
+
 set OLLAMA_HEALTH_URL=http://127.0.0.1:11434/api/tags
 set BACKEND_HEALTH_URL=http://127.0.0.1:8000/health
-set FRONTEND_URL=http://localhost:8080/
+set FRONTEND_URL=http://127.0.0.1:8080/
 
 goto :main
 
-rem Polling helper: waits until URL returns HTTP 200 (or times out).
+
 :wait_for_http
 set "url=%~1"
 set /a "timeout_sec=%~2"
@@ -25,17 +28,19 @@ if !elapsed! GEQ %timeout_sec% exit /b 1
 powershell -NoProfile -Command "Start-Sleep -Seconds 2"
 goto :wait_http_loop
 
-rem Polling helper: waits until Ollama has at least one gemma3 model loaded.
-:wait_for_ollama_gemma3
+
+REM 🔥 GENERIC MODEL CHECK
+:wait_for_ollama_model
 set /a "timeout_sec=%~1"
 set /a elapsed=0
-:wait_ollama_loop
-powershell -NoProfile -Command "$u='http://127.0.0.1:11434/api/tags'; try { $r=Invoke-RestMethod -Uri $u -UseBasicParsing -Method GET -TimeoutSec 2; if (($r.models | Where-Object { $_.name -like 'gemma3*' } | Select-Object -First 1)) { exit 0 } } catch {} ; exit 1"
+:wait_model_loop
+powershell -NoProfile -Command "$u='http://127.0.0.1:11434/api/tags'; try { $r=Invoke-RestMethod -Uri $u -UseBasicParsing -Method GET -TimeoutSec 2; if (($r.models | Where-Object { $_.name -like '%MODEL_NAME%*' } | Select-Object -First 1)) { exit 0 } } catch {} ; exit 1"
 if %errorlevel%==0 exit /b 0
 set /a elapsed+=2
 if !elapsed! GEQ %timeout_sec% exit /b 1
 powershell -NoProfile -Command "Start-Sleep -Seconds 2"
-goto :wait_ollama_loop
+goto :wait_model_loop
+
 
 :main
 echo ==================================================
@@ -43,9 +48,8 @@ echo Starting SRM Admission Chatbot...
 echo ==================================================
 
 echo.
-echo [1/4] Starting Ollama ^(server + gemma3^)...
+echo [1/4] Starting Ollama (server + %MODEL_NAME%)...
 
-rem Start Ollama only if not already reachable.
 powershell -NoProfile -Command "try { (Invoke-WebRequest -Uri '%OLLAMA_HEALTH_URL%' -UseBasicParsing -Method GET -TimeoutSec 2).StatusCode | Out-Null; exit 0 } catch { exit 1 }"
 if %errorlevel%==0 (
     echo Ollama is already running.
@@ -59,38 +63,39 @@ if %errorlevel%==0 (
     )
 )
 
-rem Ensure gemma3 is available to reduce first-request latency.
-powershell -NoProfile -Command "$u='http://127.0.0.1:11434/api/tags'; try { $r=Invoke-RestMethod -Uri $u -UseBasicParsing -Method GET -TimeoutSec 2; if (($r.models | Where-Object { $_.name -like 'gemma3*' } | Select-Object -First 1)) { exit 0 } } catch {} ; exit 1"
+REM 🔥 CHECK IF MODEL EXISTS
+powershell -NoProfile -Command "$u='http://127.0.0.1:11434/api/tags'; try { $r=Invoke-RestMethod -Uri $u -UseBasicParsing -Method GET -TimeoutSec 2; if (($r.models | Where-Object { $_.name -like '%MODEL_NAME%*' } | Select-Object -First 1)) { exit 0 } } catch {} ; exit 1"
 if %errorlevel%==0 (
-    echo gemma3 is already available in Ollama.
+    echo %MODEL_NAME% is already available in Ollama.
 ) else (
-    start cmd /k "ollama pull gemma3"
-    echo Waiting for gemma3 model in Ollama...
-    call :wait_for_ollama_gemma3 300
+    start cmd /k "ollama pull %MODEL_NAME%"
+    echo Waiting for %MODEL_NAME% model in Ollama...
+    call :wait_for_ollama_model 300
     if errorlevel 1 (
-        echo Timed out waiting for gemma3. First chat may be slow.
+        echo Timed out waiting for %MODEL_NAME%. First chat may be slow.
     )
 )
 
 echo.
 echo [2/4] Setting up Python Environment...
 if not exist .venv\Scripts\activate.bat (
-    echo Creating Python virtual environment ^(.venv^)...
+    echo Creating Python virtual environment (.venv)...
     python -m venv .venv
 )
+
 call .venv\Scripts\activate.bat
 echo Installing/Verifying Python requirements...
-python -m pip install -r requirements.txt
+python -m pip install -q -r requirements.txt
 
 echo.
 echo Verifying Vector Database...
-if not exist vector_db\ (
+if not exist vector_db_qdrant\ (
     echo Vector DB not found. Building Vector Database...
     python backend/rag_pipeline.py --build
 )
 
 echo.
-echo [3/4] Starting Backend Server ^(FastAPI on Port 8000^)...
+echo [3/4] Starting Backend Server (FastAPI on Port 8000)...
 powershell -NoProfile -Command "try { (Invoke-WebRequest -Uri '%BACKEND_HEALTH_URL%' -UseBasicParsing -Method GET -TimeoutSec 2).StatusCode | Out-Null; exit 0 } catch { exit 1 }"
 if %errorlevel%==0 (
     echo Backend is already running.
@@ -105,7 +110,7 @@ if %errorlevel%==0 (
 )
 
 echo.
-echo [4/4] Starting Frontend Server ^(Vite^)...
+echo [4/4] Starting Frontend Server (Vite)...
 powershell -NoProfile -Command "try { (Invoke-WebRequest -Uri '%FRONTEND_URL%' -UseBasicParsing -Method GET -TimeoutSec 2).StatusCode | Out-Null; exit 0 } catch { exit 1 }"
 if %errorlevel%==0 (
     echo Frontend is already running.
@@ -128,4 +133,3 @@ echo ==================================================
 
 if "%DO_PAUSE%"=="1" pause
 exit /b 0
-

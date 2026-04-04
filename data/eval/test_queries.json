@@ -1,0 +1,434 @@
+[
+  {
+    "id": "admission_process_btech",
+    "question": "What is the admission process for BTech?",
+    "expected_intent": "procedural",
+    "expected_keywords": ["SRMJEEE", "entrance", "examination", "B.Tech"],
+    "expected_items": ["SRMJEEE", "entrance examination", "qualifying examination", "minimum marks"],
+    "should_not_contain": ["CET", "NEET"]
+  },
+  {
+    "id": "admission_exam_btech",
+    "question": "Which entrance exam is required for BTech admission at SRM?",
+    "expected_intent": "factual",
+    "expected_keywords": ["SRMJEEE", "UG", "entrance"],
+    "expected_items": ["SRMJEEE (UG)"],
+    "should_not_contain": []
+  },
+  {
+    "id": "eligibility_btech",
+    "question": "What are the eligibility criteria for BTech at SRMIST?",
+    "expected_intent": "factual",
+    "expected_keywords": ["60%", "Physics", "Mathematics", "qualifying examination"],
+    "expected_items": ["60%", "Physics", "Mathematics", "10+2", "Chemistry"],
+    "should_not_contain": []
+  },
+  {
+    "id": "age_requirement_btech",
+    "question": "What is the age requirement for BTech admission?",
+    "expected_intent": "factual",
+    "expected_keywords": ["16 years", "6 months", "31st July"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "mtech_entrance",
+    "question": "What exam is needed for MTech admission at SRM?",
+    "expected_intent": "factual",
+    "expected_keywords": ["SRMJEEE", "PG"],
+    "expected_items": ["SRMJEEE (PG)"],
+    "should_not_contain": []
+  },
+  {
+    "id": "barch_entrance",
+    "question": "How do I apply for B.Arch at SRM?",
+    "expected_intent": "procedural",
+    "expected_keywords": ["NATA", "B.Arch"],
+    "expected_items": ["NATA"],
+    "should_not_contain": ["SRMJEEE"]
+  },
+  {
+    "id": "non_entrance_programs",
+    "question": "Which engineering programs don't require an entrance exam at SRM?",
+    "expected_intent": "listing",
+    "expected_keywords": ["B.Des", "M.Arch", "qualifying examination"],
+    "expected_items": ["B.Des", "M.Arch"],
+    "should_not_contain": []
+  },
+  {
+    "id": "btech_fee",
+    "question": "What are the BTech fees at SRM?",
+    "expected_intent": "factual",
+    "expected_keywords": ["fee", "B.Tech"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "btech_cse_fee",
+    "question": "What is the fee for BTech Computer Science at SRM KTR?",
+    "expected_intent": "factual",
+    "expected_keywords": ["fee", "Computer Science"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "btech_aiml_fee",
+    "question": "What is the fee for BTech AI ML at SRM?",
+    "expected_intent": "factual",
+    "expected_keywords": ["fee", "Artificial Intelligence", "Machine Learning"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "scholarship_info",
+    "question": "What scholarships are available at SRM for engineering students?",
+    "expected_intent": "listing",
+    "expected_keywords": ["scholarship"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "mtech_stipend",
+    "question": "Do MTech students get a stipend at SRM?",
+    "expected_intent": "factual",
+    "expected_keywords": ["12,400", "stipend", "M.Tech"],
+    "expected_items": ["Rs.12,400", "monthly"],
+    "should_not_contain": []
+  },
+  {
+    "id": "hostel_info",
+    "question": "Tell me about hostel facilities at SRM KTR",
+    "expected_intent": "general_query",
+    "expected_keywords": ["hostel", "accommodation"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "placement_stats",
+    "question": "What are the campus placement statistics at SRM?",
+    "expected_intent": "factual",
+    "expected_keywords": ["placement", "Career Centre"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "highest_ctc",
+    "question": "What is the highest CTC offered in placements at SRM?",
+    "expected_intent": "factual",
+    "expected_keywords": ["CTC", "LPA"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "campus_life",
+    "question": "How is the campus life at SRM KTR?",
+    "expected_intent": "general_query",
+    "expected_keywords": ["campus"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "dept_listing_computing",
+    "question": "What departments are under the Faculty of Engineering and Technology?",
+    "expected_intent": "listing",
+    "expected_keywords": ["department"],
+    "expected_items": ["Computer Science", "Computing Technologies", "Computational Intelligence", "Networking"],
+    "should_not_contain": []
+  },
+  {
+    "id": "cintel_head",
+    "question": "Who is the head of CINTEL department at SRM?",
+    "expected_intent": "person_lookup",
+    "expected_keywords": ["Computational Intelligence", "head", "department"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "cintel_about",
+    "question": "What is the CINTEL department at SRM?",
+    "expected_intent": "factual",
+    "expected_keywords": ["Computational Intelligence"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "courses_available",
+    "question": "What courses are available at SRM?",
+    "expected_intent": "listing",
+    "expected_keywords": ["B.Tech", "Engineering"],
+    "expected_items": ["Engineering", "Medicine", "Management", "Law"],
+    "should_not_contain": []
+  },
+  {
+    "id": "btech_programs_list",
+    "question": "List all BTech programs offered at SRM",
+    "expected_intent": "listing",
+    "expected_keywords": ["B.Tech", "Computer Science"],
+    "expected_items": ["Computer Science", "Electronics", "Mechanical", "Civil", "Artificial Intelligence"],
+    "should_not_contain": []
+  },
+  {
+    "id": "srmjeee_details",
+    "question": "Tell me about the SRMJEEE exam",
+    "expected_intent": "factual",
+    "expected_keywords": ["SRMJEEE", "entrance", "examination", "B.Tech"],
+    "expected_items": ["SRMJEEE"],
+    "should_not_contain": []
+  },
+  {
+    "id": "campus_comparison",
+    "question": "Which is better, SRM Kattankulathur or SRM Ramapuram?",
+    "expected_intent": "comparison",
+    "expected_keywords": ["Kattankulathur", "Ramapuram"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "nri_admission",
+    "question": "What is the NRI admission process at SRM?",
+    "expected_intent": "procedural",
+    "expected_keywords": ["NRI", "international", "admission"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "lateral_entry",
+    "question": "What are the eligibility criteria for lateral entry into BTech at SRM?",
+    "expected_intent": "factual",
+    "expected_keywords": ["lateral", "entry"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "phd_admission",
+    "question": "What is the PhD admission process at SRMIST?",
+    "expected_intent": "procedural",
+    "expected_keywords": ["PhD", "admission"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "milan_event",
+    "question": "Tell me about Milan at SRM",
+    "expected_intent": "general_query",
+    "expected_keywords": ["Milan"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "cultural_events",
+    "question": "What cultural events happen at SRM?",
+    "expected_intent": "listing",
+    "expected_keywords": ["event", "cultural"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "faculty_lookup",
+    "question": "Tell me about Dr. Maheshwari in the CINTEL department",
+    "expected_intent": "person_lookup",
+    "expected_keywords": ["Maheshwari", "Computational Intelligence"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "research_highlights",
+    "question": "What are SRM's research achievements?",
+    "expected_intent": "factual",
+    "expected_keywords": ["research", "patents", "publications"],
+    "expected_items": ["patents", "publications"],
+    "should_not_contain": []
+  },
+  {
+    "id": "accreditations",
+    "question": "What accreditations does SRMIST have?",
+    "expected_intent": "listing",
+    "expected_keywords": ["NAAC", "NIRF"],
+    "expected_items": ["NAAC", "NIRF"],
+    "should_not_contain": []
+  },
+  {
+    "id": "nirf_ranking",
+    "question": "What is SRM's NIRF ranking?",
+    "expected_intent": "factual",
+    "expected_keywords": ["NIRF", "ranking"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "management_quota",
+    "question": "How can I apply for management quota seats at SRMIST?",
+    "expected_intent": "procedural",
+    "expected_keywords": ["management", "admission"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "btech_cybersecurity_fee",
+    "question": "What is the fee for BTech Cyber Security at SRM?",
+    "expected_intent": "factual",
+    "expected_keywords": ["fee", "Cyber Security"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "how_to_apply_steps",
+    "question": "What are the steps to apply for BTech at SRM?",
+    "expected_intent": "procedural",
+    "expected_keywords": ["SRMJEEE", "apply", "register"],
+    "expected_items": ["register", "SRMJEEE", "entrance"],
+    "should_not_contain": []
+  },
+  {
+    "id": "greeting_hello",
+    "question": "Hello",
+    "expected_intent": "general_query",
+    "expected_keywords": [],
+    "expected_items": [],
+    "should_not_contain": ["error", "not found"]
+  },
+  {
+    "id": "agricultural_science",
+    "question": "Tell me about SRM Agricultural Science",
+    "expected_intent": "general_query",
+    "expected_keywords": ["Agriculture"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "sports_achievements",
+    "question": "What are SRM's sports achievements?",
+    "expected_intent": "listing",
+    "expected_keywords": ["sports", "medal"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "medical_admission",
+    "question": "Is medical a good option at SRM?",
+    "expected_intent": "general_query",
+    "expected_keywords": ["medical", "Medicine"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "international_students",
+    "question": "How can international students apply to SRM?",
+    "expected_intent": "procedural",
+    "expected_keywords": ["international", "admission"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "semester_abroad",
+    "question": "Does SRM have a semester abroad program?",
+    "expected_intent": "factual",
+    "expected_keywords": ["Semester Abroad", "international"],
+    "expected_items": ["Semester Abroad Program"],
+    "should_not_contain": []
+  },
+  {
+    "id": "hod_nwc",
+    "question": "Who is the HOD of NWC?",
+    "expected_intent": "person_lookup",
+    "expected_keywords": ["Networking and Communications"],
+    "expected_items": [],
+    "should_not_contain": ["Saisanthiya", "Annapurani", "Panaiyappan"]
+  },
+  {
+    "id": "hod_ctech",
+    "question": "Who is HOD of Ctech Dept?",
+    "expected_intent": "person_lookup",
+    "expected_keywords": ["Computing Technologies"],
+    "expected_items": [],
+    "should_not_contain": ["Pushpalatha"]
+  },
+  {
+    "id": "hod_computer_science",
+    "question": "Who is the HOD of the Department of Computer Science at SRM?",
+    "expected_intent": "person_lookup",
+    "expected_keywords": ["Computer Science", "Head"],
+    "expected_items": ["Muthulakshmi"],
+    "should_not_contain": []
+  },
+  {
+    "id": "school_computing_departments",
+    "question": "What departments are under the School of Computing?",
+    "expected_intent": "listing",
+    "expected_keywords": ["department"],
+    "expected_items": ["Computing Technologies", "Networking and Communications", "Computational Intelligence", "Data Science"],
+    "should_not_contain": ["Mechanical", "Civil"]
+  },
+  {
+    "id": "school_computing_chairperson",
+    "question": "Who is the chairperson of the School of Computing?",
+    "expected_intent": "person_lookup",
+    "expected_keywords": ["School of Computing", "Chairperson"],
+    "expected_items": ["Revathi"],
+    "should_not_contain": []
+  },
+  {
+    "id": "hod_aerospace",
+    "question": "Who is the head of the Department of Aerospace Engineering?",
+    "expected_intent": "person_lookup",
+    "expected_keywords": ["Aerospace", "Head"],
+    "expected_items": ["Ganapathy"],
+    "should_not_contain": []
+  },
+  {
+    "id": "dean_fet",
+    "question": "Who is the Dean of Faculty of Engineering and Technology?",
+    "expected_intent": "person_lookup",
+    "expected_keywords": ["Dean", "Engineering"],
+    "expected_items": ["Leenus"],
+    "should_not_contain": []
+  },
+  {
+    "id": "school_mech_departments",
+    "question": "What departments are part of School of Mechanical Engineering?",
+    "expected_intent": "listing",
+    "expected_keywords": ["department"],
+    "expected_items": ["Mechanical Engineering", "Automobile Engineering", "Aerospace Engineering", "Mechatronics"],
+    "should_not_contain": ["Computer Science", "Electronics"]
+  },
+  {
+    "id": "dept_cse_about",
+    "question": "Tell me about the Department of Computer Science and Engineering at SRM",
+    "expected_intent": "general_query",
+    "expected_keywords": ["Computer Science", "Engineering"],
+    "expected_items": [],
+    "should_not_contain": []
+  },
+  {
+    "id": "hod_dsbs",
+    "question": "Who is the HOD of Data Science and Business Systems department?",
+    "expected_intent": "person_lookup",
+    "expected_keywords": ["Data Science", "Business Systems", "Head"],
+    "expected_items": ["Kavitha"],
+    "should_not_contain": []
+  },
+  {
+    "id": "colleges_at_srm",
+    "question": "What are the different colleges at SRMIST?",
+    "expected_intent": "listing",
+    "expected_keywords": ["College"],
+    "expected_items": ["Engineering", "Science", "Management", "Law"],
+    "should_not_contain": []
+  },
+  {
+    "id": "hod_ece",
+    "question": "Who is the head of ECE department at SRM?",
+    "expected_intent": "person_lookup",
+    "expected_keywords": ["Electronics", "Communication", "Head"],
+    "expected_items": ["Sangeetha"],
+    "should_not_contain": []
+  },
+  {
+    "id": "btech_cse_programs",
+    "question": "What B.Tech Computer Science programs are offered at SRM?",
+    "expected_intent": "listing",
+    "expected_keywords": ["B.Tech", "Computer Science"],
+    "expected_items": [],
+    "should_not_contain": []
+  }
+]

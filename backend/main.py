@@ -40,13 +40,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="SRM Admission Chatbot",
-    version="4.0",
+    version="4.1",
     lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=SETTINGS.api_allowed_origins,
+    allow_origins=SETTINGS.api.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -69,7 +69,7 @@ async def health():
 
     return HealthResponse(
         status="ok",
-        version="4.0",
+        version="4.1",
         vector_db_status=db_status,
     )
 

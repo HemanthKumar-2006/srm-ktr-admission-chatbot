@@ -15,10 +15,6 @@ vector_db_qdrant/
 # Data
 data/raw/
 backend/data/
-data/eval/
-
-# Analysis artifacts
-kg_analysis*.txt
 
 # Node
 node_modules/
@@ -36,6 +32,3 @@ Thumbs.db
 
 # Ollama
 *.gguf
-
-# Cursor
-.cursor/
