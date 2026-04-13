@@ -19,6 +19,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger("srm_chatbot")
 
+
+def _model_dump(model_obj):
+    if model_obj is None:
+        return None
+    if hasattr(model_obj, "model_dump"):
+        return model_obj.model_dump(exclude_none=True)
+    return model_obj.dict(exclude_none=True)
+
 # ================= LIFESPAN =================
 
 @asynccontextmanager
@@ -79,12 +87,21 @@ async def health():
 async def chat(req: ChatRequest):
 
     question = req.query.strip()
+    pinned_context = _model_dump(req.pinned_context)
 
     if not question:
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
     # ================= CACHE =================
-    cached = cache.get(question)
+    cache_scope = {
+        "query": question,
+        "campus": req.campus,
+        "session_scope": req.session_id or "",
+        "model": SETTINGS.rag.llm.model,
+        "config_version": f"{app.version}:{SETTINGS.rag.collection_name}",
+        "pinned_context": pinned_context or {},
+    }
+    cached = cache.get(cache_scope)
     if cached:
         logger.info(f"Cache HIT: {question[:50]}")
         return ChatResponse(**cached)
@@ -104,12 +121,17 @@ async def chat(req: ChatRequest):
                 question,
                 campus=req.campus,
                 conversation_context=conv_context,
+                pinned_context=pinned_context,
             ),
         )
 
         answer = result.get("answer", "")
         sources_raw = result.get("sources", [])
         detected_intent = result.get("intent", "general_query")
+        resolved_campus = result.get("campus") or req.campus
+        resolved_program = result.get("program")
+        query_metadata = result.get("query_metadata")
+        confidence = result.get("confidence")
 
         if not answer:
             answer = (
@@ -132,11 +154,13 @@ async def chat(req: ChatRequest):
             "response": answer,
             "intent": detected_intent,
             "sources": sources,
-            "campus": req.campus,
-            "program": None,
+            "campus": resolved_campus,
+            "program": resolved_program,
+            "confidence": confidence,
+            "query_metadata": query_metadata,
         }
 
-        cache.set(question, response_data)
+        cache.set(cache_scope, response_data)
 
         if req.session_id:
             conversation_memory.add_turn(req.session_id, question, answer)
@@ -153,6 +177,8 @@ async def chat(req: ChatRequest):
             sources=[],
             campus=None,
             program=None,
+            confidence=None,
+            query_metadata=None,
         )
 
     except Exception as e:

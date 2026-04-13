@@ -241,6 +241,9 @@ def answer_admission_question(
     if "route" in q_low and "admission" in q_low and not _looks_program_specific(q_low):
         answer = _build_route_overview_answer(kg)
         if answer:
+            freshness = _summarize_profile_freshness(
+                [profiles[eid] for eid in ("admission--india", "admission--international") if eid in profiles]
+            )
             return {
                 "answer": answer,
                 "sources": [
@@ -248,6 +251,9 @@ def answer_admission_question(
                     profiles["admission--international"]["source_url"],
                 ],
                 "intent": "admission_query",
+                "campus": selected_campus,
+                "program": None,
+                "freshness": freshness,
             }
 
     program_match = _match_program_text(kg, q_low) if _has_specific_program_hint(q_low) else None
@@ -283,6 +289,11 @@ def answer_admission_question(
                 "answer": "\n\n".join(sections),
                 "sources": _unique(sources),
                 "intent": "how_to_apply" if "how_to_apply" in requested_fields else "admission_query",
+                "campus": selected_campus,
+                "program": kg.entities[program_match["program_id"]].name if program_match["program_id"] in kg.entities else None,
+                "freshness": _summarize_profile_freshness(
+                    [profiles[admission_id] for admission_id in admission_ids if admission_id in profiles]
+                ),
             }
 
     if scope_matches:
@@ -301,6 +312,11 @@ def answer_admission_question(
                 "answer": "\n\n".join(sections),
                 "sources": _unique(sources),
                 "intent": "admission_query",
+                "campus": selected_campus,
+                "program": None,
+                "freshness": _summarize_profile_freshness(
+                    [profiles[ent.id] for ent in scope_matches if ent.id in profiles]
+                ),
             }
 
     if any(term in q_low for term in ("admission", "apply", "application", "international", "india", "domestic")):
@@ -311,6 +327,11 @@ def answer_admission_question(
                 "answer": answer,
                 "sources": _unique([profiles[eid]["source_url"] for eid in source_ids if eid in profiles]),
                 "intent": "admission_query",
+                "campus": selected_campus,
+                "program": None,
+                "freshness": _summarize_profile_freshness(
+                    [profiles[eid] for eid in source_ids if eid in profiles]
+                ),
             }
 
     return None
@@ -1103,3 +1124,33 @@ def _unique_link_dicts(links: list[dict[str, str]]) -> list[dict[str, str]]:
         seen.add(key)
         result.append(link)
     return result
+
+
+def _summarize_profile_freshness(profile_list: list[dict[str, Any]]) -> str:
+    timestamps: list[str] = []
+    for profile in profile_list:
+        for field in (
+            "criteria",
+            "eligibility",
+            "fees",
+            "how_to_apply",
+            "important_dates",
+            "exam_pattern_or_syllabus",
+            "scholarship",
+            "refund_policy",
+            "faq_summary",
+        ):
+            ts = (profile.get(field, {}) or {}).get("last_scraped_at", "")
+            if ts:
+                timestamps.append(ts)
+        for field in ("apply_links", "exam_links", "prospectus_links"):
+            for link in profile.get(field, []) or []:
+                ts = link.get("last_scraped_at", "")
+                if ts:
+                    timestamps.append(ts)
+
+    if not timestamps:
+        return ""
+
+    latest = max(timestamps)
+    return f"Latest supporting admission source scraped at {latest}"

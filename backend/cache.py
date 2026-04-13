@@ -7,9 +7,11 @@ prompt/pipeline versions are never served after a code change.
 """
 
 import hashlib
+import json
 import time
 from collections import OrderedDict
 from threading import Lock
+from typing import Any, Mapping
 
 
 class QueryCache:
@@ -36,12 +38,33 @@ class QueryCache:
         self._hits = 0
         self._misses = 0
 
-    def _make_key(self, query: str) -> str:
-        normalized = f"{self._config_version}:{query.lower().strip()}"
+    def _normalize_scope(self, scope: str | Mapping[str, Any]) -> str:
+        if isinstance(scope, str):
+            return json.dumps(
+                {
+                    "query": scope.lower().strip(),
+                    "config_version": self._config_version,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+
+        normalized_scope = {
+            "config_version": scope.get("config_version", self._config_version),
+            "query": str(scope.get("query", "")).lower().strip(),
+            "campus": str(scope.get("campus", "") or "").lower().strip(),
+            "session_scope": str(scope.get("session_scope", "") or "").lower().strip(),
+            "model": str(scope.get("model", "") or "").lower().strip(),
+            "pinned_context": scope.get("pinned_context") or {},
+        }
+        return json.dumps(normalized_scope, sort_keys=True, separators=(",", ":"))
+
+    def _make_key(self, scope: str | Mapping[str, Any]) -> str:
+        normalized = self._normalize_scope(scope)
         return hashlib.md5(normalized.encode()).hexdigest()
 
-    def get(self, query: str) -> dict | None:
-        key = self._make_key(query)
+    def get(self, scope: str | Mapping[str, Any]) -> dict | None:
+        key = self._make_key(scope)
 
         with self._lock:
             if key not in self._cache:
@@ -59,8 +82,8 @@ class QueryCache:
             self._hits += 1
             return entry["data"]
 
-    def set(self, query: str, data: dict):
-        key = self._make_key(query)
+    def set(self, scope: str | Mapping[str, Any], data: dict):
+        key = self._make_key(scope)
 
         with self._lock:
             if key in self._cache:
@@ -80,6 +103,7 @@ class QueryCache:
                 "hits": self._hits,
                 "misses": self._misses,
                 "hit_rate": f"{(self._hits / total * 100):.1f}%" if total > 0 else "0%",
+                "key_fields": ["query", "campus", "session_scope", "model", "pinned_context", "config_version"],
             }
 
     def clear(self):

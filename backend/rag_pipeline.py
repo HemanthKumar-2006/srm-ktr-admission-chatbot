@@ -39,7 +39,9 @@ from backend.admission_profiles import (
     load_admission_profiles,
     save_admission_profiles,
 )
+from backend.answer_planner import AnswerPlan, build_answer_plan
 from backend.knowledge_graph import KnowledgeGraph, build_knowledge_graph
+from backend.query_router import RouteDecision, route_query
 from backend.settings import SETTINGS  # new nested Settings object
 
 # ================= CONFIG =================
@@ -407,6 +409,30 @@ def detect_intent(question: str) -> dict[str, bool]:
         "query_type": classify_query_type(q),
         "is_role_query": bool(_ROLE_QUERY_SIGNAL.search(q)),
     }
+
+
+def _route_to_query_type(route: RouteDecision, fallback: str = "factual") -> str:
+    if route.routing_target == "kg_role" or route.domain == "faculty":
+        return "person_lookup"
+    if route.task == "list":
+        return "listing"
+    if route.task == "compare":
+        return "comparison"
+    if route.task in {"procedure", "timeline"}:
+        return "procedural"
+    return fallback
+
+
+def _legacy_intent_from_route(question: str, route: RouteDecision) -> dict[str, bool]:
+    intent = detect_intent(question)
+    intent["query_type"] = _route_to_query_type(route, intent.get("query_type", "factual"))
+
+    if route.routing_target == "kg_role" or route.domain == "faculty":
+        intent["is_role_query"] = True
+    if route.routing_target == "admissions":
+        intent["is_how_to_apply_query"] = intent.get("is_how_to_apply_query") or route.task == "procedure"
+        intent["is_admission_date_query"] = intent.get("is_admission_date_query") or route.task == "timeline"
+    return intent
 
 
 def build_retrieval_query(question: str, intent: dict[str, bool]) -> str:
@@ -1415,11 +1441,87 @@ def compress_chunks(
     return compressed
 
 
+def _augment_retrieval_query_with_plan(query: str, plan: AnswerPlan) -> str:
+    extras: list[str] = []
+    if plan.evidence_targets:
+        extras.append(" ".join(target.replace("_", " ") for target in plan.evidence_targets))
+    if plan.candidate_items:
+        extras.append(" ".join(plan.candidate_items[:6]))
+
+    resolved = []
+    for value in plan.resolved_entities.values():
+        if isinstance(value, str):
+            resolved.append(value)
+        elif isinstance(value, list):
+            resolved.extend(str(item) for item in value)
+    if resolved:
+        extras.append(" ".join(resolved[:6]))
+
+    combined = " ".join(part for part in [query, " ".join(extras).strip()] if part).strip()
+    return combined or query
+
+
+def _combine_chunk_sets(
+    primary_chunks: list[tuple[str, dict, float]],
+    extra_chunks: list[tuple[str, dict, float]],
+    *,
+    final_chunk_count: int,
+) -> list[tuple[str, dict, float]]:
+    merged: list[tuple[str, dict, float]] = []
+    seen: set[tuple[str, str, str]] = set()
+
+    for doc, meta, score in extra_chunks + primary_chunks:
+        key = (
+            meta.get("source", ""),
+            meta.get("chunk_level", ""),
+            doc[:160],
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append((doc, meta, score))
+
+    return _diverse_top_k(merged, final_chunk_count, max_per_source=2)
+
+
+def _collect_decomposition_chunks(
+    plan: AnswerPlan,
+    *,
+    campus: str | None,
+    boost_admission: bool,
+    intent: dict[str, bool],
+) -> list[tuple[str, dict, float]]:
+    collected: list[tuple[str, dict, float]] = []
+    for step in plan.decomposition_steps[:4]:
+        subchunks = retrieve_with_overrides(
+            query=step.retrieval_query,
+            retrieval_limit=max(CFG.retrieval_limit // 2, 18),
+            final_chunk_count=max(CFG.final_chunk_count // 2, 4),
+            campus=campus,
+            boost_admission=boost_admission,
+            intent=intent,
+        )
+        collected.extend(subchunks)
+    return collected
+
+
+def _summarize_chunk_freshness(chunks: list[tuple[str, dict, float]]) -> str:
+    timestamps = [
+        str(meta.get("scraped_at", "")).strip()
+        for _, meta, _ in chunks
+        if str(meta.get("scraped_at", "")).strip()
+    ]
+    if not timestamps:
+        return ""
+    return f"Latest supporting page scraped at {max(timestamps)}"
+
+
 def build_prompt(
     question: str,
     chunks: list[tuple[str, dict, float]],
     query_type: str = "factual",
     kg_grounding: str = "",
+    answer_plan: AnswerPlan | None = None,
 ) -> str:
     context_parts = []
     for i, (doc, meta, _) in enumerate(chunks, 1):
@@ -1444,6 +1546,10 @@ def build_prompt(
         parts.append("")
     if kg_section:
         parts.append(kg_section)
+    if answer_plan:
+        parts.append("=== ANSWER PLAN ===")
+        parts.append(answer_plan.to_prompt_block())
+        parts.append("")
     parts.append("=== CONTEXT ===")
     parts.append(context)
     parts.append("")
@@ -1513,6 +1619,13 @@ def call_llm(prompt: str, stream: bool = CFG.llm_stream) -> str:
     except requests.RequestException as e:
         log.error(f"LLM request failed: {e}")
         raise LLMError("An error occurred while generating the answer. Please try again later.") from e
+
+
+def _call_router_llm(prompt: str) -> str:
+    try:
+        return call_llm(prompt, stream=False)
+    except LLMError:
+        return ""
 
 
 # ================= RAG QUERY =================
@@ -1739,6 +1852,320 @@ def query_rag(
 
     log.info(f"Total query time: {time.time() - t0:.2f}s | Intent: {detected_intent}")
     return {"answer": answer, "sources": sources, "intent": detected_intent}
+
+
+def query_rag_v2(
+    question: str,
+    *,
+    campus: str | None = None,
+    conversation_context: str = "",
+    pinned_context: dict | None = None,
+) -> dict:
+    log.info(f"Query: {question!r}")
+    t0 = time.time()
+
+    if question.lower().strip().rstrip("!?.") in _GREETINGS:
+        greeting_route = RouteDecision(
+            domain="general",
+            task="general",
+            routing_target="retrieval",
+            confidence=0.95,
+            entities={"campus": campus} if campus else {},
+        )
+        return {
+            "answer": (
+                "Hello! I'm the SRMIST Assistant. "
+                "Ask me anything about SRM â€” admissions, fees, courses, departments, events, campus life, placements, research, and more!"
+            ),
+            "sources": [],
+            "intent": "greeting",
+            "campus": campus,
+            "program": None,
+            "confidence": greeting_route.confidence,
+            "query_metadata": greeting_route.to_metadata(),
+        }
+
+    contextualized_q = _resolve_with_context(question, conversation_context)
+    if contextualized_q != question:
+        log.info("Resolved pronouns with conversation context")
+
+    processed_question = preprocess_query(contextualized_q)
+    log.info(f"Preprocessed: {processed_question!r}")
+
+    kg = get_knowledge_graph()
+    route = route_query(
+        processed_question,
+        selected_campus=campus,
+        pinned_context=pinned_context,
+        kg=kg,
+        llm_router=_call_router_llm,
+    )
+    answer_plan = build_answer_plan(question, route, kg=kg)
+
+    resolved_campus = route.entities.get("campus") or campus
+    intent = _legacy_intent_from_route(processed_question, route)
+    retrieval_query = build_retrieval_query(processed_question, intent)
+    retrieval_query = _augment_retrieval_query_with_plan(retrieval_query, answer_plan)
+
+    is_admission_query = route.domain in {"admissions", "fees"} or bool(_ADMISSION_QUERY_SIGNAL.search(processed_question))
+    query_type = _route_to_query_type(route, intent.get("query_type", "factual"))
+
+    kg_grounding = ""
+    freshness = ""
+
+    if kg:
+        if route.routing_target == "kg_listing" or query_type == "listing":
+            kg_answer = kg.answer_listing_query(processed_question)
+            if kg_answer:
+                kg_grounding = kg_answer
+                log.info(f"KG listing answer found: {kg_grounding[:100]}")
+        elif route.routing_target == "kg_role" or query_type == "person_lookup" or intent.get("is_role_query"):
+            kg_answer = kg.answer_role_query(processed_question)
+            if kg_answer:
+                kg_grounding = kg_answer
+                log.info(f"KG role answer found: {kg_grounding}")
+
+    if not kg_grounding and route.routing_target == "admissions":
+        admission_profiles = get_admission_profiles()
+        if kg and admission_profiles:
+            structured_admission = answer_admission_question(
+                processed_question,
+                campus=resolved_campus,
+                kg=kg,
+                profiles=admission_profiles,
+            )
+            if structured_admission:
+                log.info("Structured admission answer found.")
+                freshness = structured_admission.get("freshness", "") or ""
+                metadata = route.to_metadata(freshness=freshness or None)
+                return {
+                    "answer": structured_admission.get("answer", "") or _FALLBACK_NO_CONTEXT,
+                    "sources": structured_admission.get("sources", []),
+                    "intent": structured_admission.get("intent", "admission_query"),
+                    "campus": structured_admission.get("campus") or resolved_campus,
+                    "program": structured_admission.get("program") or route.entities.get("program"),
+                    "confidence": metadata.get("confidence"),
+                    "query_metadata": metadata,
+                }
+
+    chunks = retrieve(
+        retrieval_query,
+        campus=resolved_campus,
+        boost_admission=is_admission_query,
+        intent=intent,
+    )
+    if answer_plan.decomposition_steps:
+        planned_chunks = _collect_decomposition_chunks(
+            answer_plan,
+            campus=resolved_campus,
+            boost_admission=is_admission_query,
+            intent=intent,
+        )
+        if planned_chunks:
+            chunks = _combine_chunk_sets(
+                chunks,
+                planned_chunks,
+                final_chunk_count=max(CFG.final_chunk_count + 2, 10),
+            )
+    chunks = filter_chunks_for_intent(chunks, intent, processed_question)
+
+    if not chunks:
+        metadata = route.to_metadata()
+        if kg_grounding:
+            log.info("No vector results but KG has an answer; using KG-only response.")
+            return {
+                "answer": kg_grounding,
+                "sources": [],
+                "intent": query_type,
+                "campus": resolved_campus,
+                "program": route.entities.get("program"),
+                "confidence": metadata.get("confidence"),
+                "query_metadata": metadata,
+            }
+        log.warning(f"No context retrieved for: {question!r}")
+        return {
+            "answer": _FALLBACK_NO_CONTEXT,
+            "sources": [],
+            "intent": "no_context",
+            "campus": resolved_campus,
+            "program": route.entities.get("program"),
+            "confidence": metadata.get("confidence"),
+            "query_metadata": metadata,
+        }
+
+    log.info(f"Retrieved {len(chunks)} chunks in {time.time() - t0:.2f}s")
+    freshness = _summarize_chunk_freshness(chunks)
+
+    seen: set[str] = set()
+    sources: list[str] = []
+    for _, meta, _ in chunks:
+        url = meta.get("source", "")
+        if url and url not in seen:
+            seen.add(url)
+            sources.append(url)
+
+    if intent.get("is_role_query") and not kg_grounding:
+        context_text = " ".join(doc for doc, _, _ in chunks)
+        if not _ROLE_QUERY_SIGNAL.search(context_text):
+            log.warning(f"Role query grounding failed for {question!r}")
+            metadata = route.to_metadata(freshness=freshness or None)
+            return {
+                "answer": _FALLBACK_NO_CONTEXT,
+                "sources": [],
+                "intent": "no_context",
+                "campus": resolved_campus,
+                "program": route.entities.get("program"),
+                "confidence": metadata.get("confidence"),
+                "query_metadata": metadata,
+            }
+
+    chunks = compress_chunks(chunks, processed_question)
+
+    prompt = build_prompt(
+        question,
+        chunks,
+        query_type=query_type,
+        kg_grounding=kg_grounding,
+        answer_plan=answer_plan,
+    )
+    try:
+        answer = clean_answer_text(call_llm(prompt))
+    except LLMError as e:
+        log.error(f"LLM failed for query: {question!r} â€” {e}")
+        metadata = route.to_metadata(freshness=freshness or None)
+        return {
+            "answer": _FALLBACK_LLM_ERROR,
+            "sources": sources,
+            "intent": "error",
+            "campus": resolved_campus,
+            "program": route.entities.get("program"),
+            "confidence": metadata.get("confidence"),
+            "query_metadata": metadata,
+        }
+
+    if not answer or not answer.strip():
+        log.warning(f"LLM returned empty answer for: {question!r}")
+        metadata = route.to_metadata(freshness=freshness or None)
+        return {
+            "answer": _FALLBACK_LLM_ERROR,
+            "sources": sources,
+            "intent": "error",
+            "campus": resolved_campus,
+            "program": route.entities.get("program"),
+            "confidence": metadata.get("confidence"),
+            "query_metadata": metadata,
+        }
+
+    if _FALLBACK_RE.search(answer) and _ROLE_QUERY_SIGNAL.search(processed_question):
+        log.info("LLM fallback detected; retrying with role-expanded retrieval query.")
+        retry_query = f"{processed_question} {_ROLE_QUERY_HINTS}"
+        retry_chunks = retrieve_with_overrides(
+            query=retry_query,
+            retrieval_limit=max(CFG.retrieval_limit * 2, 25),
+            max_distance=max(CFG.max_distance, 2.2),
+            final_chunk_count=max(CFG.final_chunk_count + 3, 8),
+            campus=resolved_campus,
+            boost_admission=is_admission_query,
+            intent=intent,
+        )
+        retry_chunks = filter_chunks_for_intent(retry_chunks, intent, processed_question)
+
+        if retry_chunks:
+            retry_sources = list(dict.fromkeys(
+                m.get("source", "") for _, m, _ in retry_chunks if m.get("source")
+            ))
+            retry_prompt = build_prompt(
+                question,
+                retry_chunks,
+                query_type=query_type,
+                answer_plan=answer_plan,
+            )
+            try:
+                retry_answer = clean_answer_text(call_llm(retry_prompt))
+            except LLMError:
+                retry_answer = ""
+
+            if retry_answer and not _FALLBACK_RE.search(retry_answer):
+                log.info("Retry succeeded; returning retry answer.")
+                answer = retry_answer
+                sources = retry_sources
+                freshness = _summarize_chunk_freshness(retry_chunks)
+
+    if _FALLBACK_RE.search(answer) and intent["is_admission_date_query"]:
+        log.info("LLM fallback detected; retrying with admission-date-expanded retrieval query.")
+        retry_query = f"{processed_question} {_ADMISSION_DATE_RETRY_HINTS}"
+        retry_chunks = retrieve_with_overrides(
+            query=retry_query,
+            retrieval_limit=max(CFG.retrieval_limit * 2, 30),
+            max_distance=max(CFG.max_distance, 2.2),
+            final_chunk_count=max(CFG.final_chunk_count + 3, 8),
+            campus=resolved_campus,
+            boost_admission=is_admission_query,
+            intent=intent,
+        )
+        retry_chunks = filter_chunks_for_intent(retry_chunks, intent, processed_question)
+
+        if retry_chunks:
+            retry_sources = list(dict.fromkeys(
+                m.get("source", "") for _, m, _ in retry_chunks if m.get("source")
+            ))
+            retry_prompt = build_prompt(
+                question,
+                retry_chunks,
+                query_type=query_type,
+                answer_plan=answer_plan,
+            )
+            try:
+                retry_answer = clean_answer_text(call_llm(retry_prompt))
+            except LLMError:
+                retry_answer = ""
+
+            if retry_answer and not _FALLBACK_RE.search(retry_answer):
+                log.info("Admission-date retry succeeded; returning retry answer.")
+                answer = retry_answer
+                sources = retry_sources
+                freshness = _summarize_chunk_freshness(retry_chunks)
+
+    if intent["is_admission_date_query"] and re.search(r"\b31st\b.*\bjuly\b", answer, re.I):
+        context_text = " ".join(doc for doc, _, _ in chunks)
+        if bool(_ELIGIBILITY_SIGNAL.search(context_text)) and not bool(_ADMISSION_DATE_SIGNAL.search(context_text)):
+            answer += (
+                "\n\n**Note:** The 31st July reference above is an age-eligibility criterion, "
+                "not an admission opening date. For the latest admissions timeline, "
+                "please visit https://www.srmist.edu.in/admission-india/."
+            )
+
+    if intent["is_how_to_apply_query"] and intent["is_btech_query"]:
+        if _CET_SIGNAL.search(answer) and not _SRMJEEE_SIGNAL.search(answer):
+            answer += (
+                "\n\n**Note:** For B.Tech admissions at SRMIST, the primary route is through "
+                "**SRMJEEE (UG)**. Please verify the latest B.Tech application steps at "
+                "https://www.srmist.edu.in/admission-india/."
+            )
+
+    if intent["is_admission_date_query"]:
+        detected_intent = "admission_date"
+    elif intent["is_how_to_apply_query"]:
+        detected_intent = "how_to_apply"
+    elif is_admission_query:
+        detected_intent = "admission_query"
+    else:
+        detected_intent = query_type
+
+    metadata = route.to_metadata(freshness=freshness or None)
+    log.info(f"Total query time: {time.time() - t0:.2f}s | Intent: {detected_intent}")
+    return {
+        "answer": answer,
+        "sources": sources,
+        "intent": detected_intent,
+        "campus": resolved_campus,
+        "program": route.entities.get("program"),
+        "confidence": metadata.get("confidence"),
+        "query_metadata": metadata,
+    }
+
+
+query_rag = query_rag_v2
 
 
 # ================= MAIN =================
