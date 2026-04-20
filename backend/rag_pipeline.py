@@ -35,12 +35,12 @@ from sentence_transformers import CrossEncoder, SentenceTransformer
 import numpy as np
 
 from backend.admission_profiles import (
-    answer_admission_question,
+    extract_admission_context,
     load_admission_profiles,
     save_admission_profiles,
 )
 from backend.answer_planner import AnswerPlan, build_answer_plan
-from backend.knowledge_graph import KnowledgeGraph, build_knowledge_graph
+from backend.knowledge_graph import KnowledgeGraph, build_knowledge_graph, load_programs_from_csv
 from backend.query_router import RouteDecision, route_query
 from backend.settings import SETTINGS  # new nested Settings object
 
@@ -139,6 +139,7 @@ _CAMPUS_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"\bvadapalani\b|\bvdp\b", re.I), "Vadapalani"),
     (re.compile(r"\bghaziabad\b|\bdelhi[\s-]?ncr\b|\bncr\b", re.I), "Delhi-NCR"),
     (re.compile(r"\btiruchirappalli\b|\btrichy\b", re.I), "Tiruchirappalli"),
+    (re.compile(r"\bsikkim\b|\bskm\b", re.I), "Sikkim"),
 ]
 
 _LEVEL_PATTERNS: list[tuple[re.Pattern, str]] = [
@@ -532,6 +533,7 @@ _knowledge_graph: KnowledgeGraph | None = None
 _KG_PATH = Path(SETTINGS.rag.vector_db_path) / "knowledge_graph.json"
 _admission_profiles: dict[str, dict] | None = None
 _ADMISSION_PROFILE_PATH = Path(SETTINGS.rag.vector_db_path) / "admission_profiles.json"
+_PROGRAMS_CSV_PATH = Path("Programs Helper/srm_programs_clean.csv")
 
 
 def get_knowledge_graph() -> KnowledgeGraph | None:
@@ -539,6 +541,7 @@ def get_knowledge_graph() -> KnowledgeGraph | None:
     if _knowledge_graph is None and _KG_PATH.exists():
         try:
             _knowledge_graph = KnowledgeGraph.load(str(_KG_PATH))
+            load_programs_from_csv(_PROGRAMS_CSV_PATH, _knowledge_graph)
         except Exception as e:
             log.warning(f"Could not load KG: {e}")
     return _knowledge_graph
@@ -1085,7 +1088,7 @@ def build_db(force_rebuild: bool = False):
 # ================= RETRIEVE =================
 
 def _build_query_filter(campus: str | None) -> models.Filter | None:
-    if not campus or campus == "KTR":
+    if not campus:
         return None
     return models.Filter(must=[
         models.FieldCondition(
@@ -1178,31 +1181,6 @@ def retrieve_with_overrides(
         )
 
     candidates = _qdrant_results_to_candidates(results, score_threshold)
-
-    if not candidates and query_filter:
-        log.info(f"No results with campus filter {campus}; retrying without filter")
-        if sparse_vec:
-            sparse_query = sparse_vec.encode_query(query)
-            prefetch = [
-                models.Prefetch(query=query_embed, using="dense", limit=prefetch_n),
-                models.Prefetch(query=sparse_query, using="sparse", limit=prefetch_n),
-            ]
-            results = client.query_points(
-                collection_name=CFG.collection_name,
-                prefetch=prefetch,
-                query=models.FusionQuery(fusion=models.Fusion.RRF),
-                limit=n,
-                with_payload=True,
-            )
-        else:
-            results = client.query_points(
-                collection_name=CFG.collection_name,
-                query=query_embed,
-                using="dense",
-                limit=n,
-                with_payload=True,
-            )
-        candidates = _qdrant_results_to_candidates(results, score_threshold)
 
     if not candidates:
         log.warning(f"No results for: {query!r}")
@@ -1323,18 +1301,18 @@ YOUR TASK: Answer the student's question using ONLY the context provided below. 
 RESPONSE STYLE:
 - Write in a warm, professional tone — like a knowledgeable senior student helping a newcomer.
 - Give COMPLETE answers. Do not cut short. If the context has details, include them ALL.
+- Format using markdown: use ## for section headings, - for bullet lists, 1. 2. 3. for step-by-step processes.
 - Use **bold** for key terms, names, and important values (fees, dates, percentages).
-- Use bullet points (- ) for lists of 3+ items.
-- Use numbered steps (1. 2. 3.) for processes and procedures.
 - Include specific numbers: fees in INR, percentages, dates, phone numbers — whatever the context provides.
 - End with a helpful next-step when appropriate (e.g., "You can apply at..." or "For more details, visit...").
 
 STRICT RULES:
 - Answer ONLY from the provided context and Knowledge Graph data. Every claim must be grounded.
 - If the context has NO relevant information, respond exactly: "I don't have enough information about this. Please visit https://www.srmist.edu.in or contact the SRM admissions office."
-- Do NOT add a "Sources:" section — sources are handled by the system.
+- Do NOT add a "Sources:" section — sources are handled separately by the system.
+- Do NOT repeat source URLs inline in your answer body.
 - NEVER invent names, fees, dates, or phone numbers not in the context.
-- If Knowledge Graph data is present, treat it as the primary authority for names, roles, and org structure."""
+- If Knowledge Graph data is present, treat it as the primary authority for names, roles, fees, and org structure."""
 
 _SOURCE_TAIL_RE = re.compile(
     r"(?:\n|^)\s*\*{0,2}sources?\*{0,2}\s*:.*", re.I | re.DOTALL
@@ -1673,192 +1651,6 @@ def query_rag(
     *,
     campus: str | None = None,
     conversation_context: str = "",
-) -> dict:
-    log.info(f"Query: {question!r}")
-    t0 = time.time()
-
-    if question.lower().strip().rstrip("!?.") in _GREETINGS:
-        return {
-            "answer": (
-                "Hello! I'm the SRMIST Assistant. "
-                "Ask me anything about SRM — admissions, fees, courses, departments, events, campus life, placements, research, and more!"
-            ),
-            "sources": [],
-            "intent": "greeting",
-        }
-
-    contextualized_q = _resolve_with_context(question, conversation_context)
-    if contextualized_q != question:
-        log.info("Resolved pronouns with conversation context")
-
-    processed_question = preprocess_query(contextualized_q)
-    log.info(f"Preprocessed: {processed_question!r}")
-
-    intent = detect_intent(processed_question)
-    retrieval_query = build_retrieval_query(processed_question, intent)
-
-    is_admission_query = bool(_ADMISSION_QUERY_SIGNAL.search(processed_question))
-    query_type = intent.get("query_type", "factual")
-
-    kg_grounding: str = ""
-    kg = get_knowledge_graph()
-
-    if kg:
-        if query_type == "listing":
-            kg_answer = kg.answer_listing_query(processed_question)
-            if kg_answer:
-                kg_grounding = kg_answer
-                log.info(f"KG listing answer found: {kg_grounding[:100]}")
-        elif query_type == "person_lookup" or intent.get("is_role_query"):
-            kg_answer = kg.answer_role_query(processed_question)
-            if kg_answer:
-                kg_grounding = kg_answer
-                log.info(f"KG role answer found: {kg_grounding}")
-
-    if not kg_grounding and (is_admission_query or intent.get("is_how_to_apply_query")):
-        admission_profiles = get_admission_profiles()
-        if kg and admission_profiles:
-            structured_admission = answer_admission_question(
-                processed_question,
-                campus=campus,
-                kg=kg,
-                profiles=admission_profiles,
-            )
-            if structured_admission:
-                log.info("Structured admission answer found.")
-                return structured_admission
-
-    chunks = retrieve(
-        retrieval_query, campus=campus, boost_admission=is_admission_query, intent=intent,
-    )
-    chunks = filter_chunks_for_intent(chunks, intent, processed_question)
-
-    if not chunks:
-        if kg_grounding:
-            log.info("No vector results but KG has an answer; using KG-only response.")
-            return {"answer": kg_grounding, "sources": [], "intent": query_type}
-        log.warning(f"No context retrieved for: {question!r}")
-        return {"answer": _FALLBACK_NO_CONTEXT, "sources": [], "intent": "no_context"}
-
-    log.info(f"Retrieved {len(chunks)} chunks in {time.time() - t0:.2f}s")
-
-    seen: set[str] = set()
-    sources: list[str] = []
-    for _, meta, _ in chunks:
-        url = meta.get("source", "")
-        if url and url not in seen:
-            seen.add(url)
-            sources.append(url)
-
-    if intent.get("is_role_query") and not kg_grounding:
-        context_text = " ".join(doc for doc, _, _ in chunks)
-        if not _ROLE_QUERY_SIGNAL.search(context_text):
-            log.warning(f"Role query grounding failed for {question!r}")
-            return {"answer": _FALLBACK_NO_CONTEXT, "sources": [], "intent": "no_context"}
-
-    chunks = compress_chunks(chunks, processed_question)
-
-    prompt = build_prompt(question, chunks, query_type=query_type, kg_grounding=kg_grounding)
-    try:
-        answer = clean_answer_text(call_llm(prompt))
-    except LLMError as e:
-        log.error(f"LLM failed for query: {question!r} — {e}")
-        return {"answer": _FALLBACK_LLM_ERROR, "sources": sources, "intent": "error"}
-
-    if not answer or not answer.strip():
-        log.warning(f"LLM returned empty answer for: {question!r}")
-        return {"answer": _FALLBACK_LLM_ERROR, "sources": sources, "intent": "error"}
-
-    # Retry 1: role query fallback
-    if _FALLBACK_RE.search(answer) and _ROLE_QUERY_SIGNAL.search(processed_question):
-        log.info("LLM fallback detected; retrying with role-expanded retrieval query.")
-        retry_query = f"{processed_question} {_ROLE_QUERY_HINTS}"
-        retry_chunks = retrieve_with_overrides(
-            query=retry_query,
-            retrieval_limit=max(CFG.retrieval_limit * 2, 25),
-            max_distance=max(CFG.max_distance, 2.2),
-            final_chunk_count=max(CFG.final_chunk_count + 3, 8),
-        )
-        retry_chunks = filter_chunks_for_intent(retry_chunks, intent, processed_question)
-
-        if retry_chunks:
-            retry_sources = list(dict.fromkeys(
-                m.get("source", "") for _, m, _ in retry_chunks if m.get("source")
-            ))
-            retry_prompt = build_prompt(question, retry_chunks, query_type=query_type)
-            try:
-                retry_answer = clean_answer_text(call_llm(retry_prompt))
-            except LLMError:
-                retry_answer = ""
-
-            if retry_answer and not _FALLBACK_RE.search(retry_answer):
-                log.info("Retry succeeded; returning retry answer.")
-                answer = retry_answer
-                sources = retry_sources
-
-    # Retry 2: admission date fallback
-    if _FALLBACK_RE.search(answer) and intent["is_admission_date_query"]:
-        log.info("LLM fallback detected; retrying with admission-date-expanded retrieval query.")
-        retry_query = f"{processed_question} {_ADMISSION_DATE_RETRY_HINTS}"
-        retry_chunks = retrieve_with_overrides(
-            query=retry_query,
-            retrieval_limit=max(CFG.retrieval_limit * 2, 30),
-            max_distance=max(CFG.max_distance, 2.2),
-            final_chunk_count=max(CFG.final_chunk_count + 3, 8),
-        )
-        retry_chunks = filter_chunks_for_intent(retry_chunks, intent, processed_question)
-
-        if retry_chunks:
-            retry_sources = list(dict.fromkeys(
-                m.get("source", "") for _, m, _ in retry_chunks if m.get("source")
-            ))
-            retry_prompt = build_prompt(question, retry_chunks, query_type=query_type)
-            try:
-                retry_answer = clean_answer_text(call_llm(retry_prompt))
-            except LLMError:
-                retry_answer = ""
-
-            if retry_answer and not _FALLBACK_RE.search(retry_answer):
-                log.info("Admission-date retry succeeded; returning retry answer.")
-                answer = retry_answer
-                sources = retry_sources
-
-    # Guardrail: age cut-off date vs admission opening date
-    if intent["is_admission_date_query"] and re.search(r"\b31st\b.*\bjuly\b", answer, re.I):
-        context_text = " ".join(doc for doc, _, _ in chunks)
-        if bool(_ELIGIBILITY_SIGNAL.search(context_text)) and not bool(_ADMISSION_DATE_SIGNAL.search(context_text)):
-            answer += (
-                "\n\n**Note:** The 31st July reference above is an age-eligibility criterion, "
-                "not an admission opening date. For the latest admissions timeline, "
-                "please visit https://www.srmist.edu.in/admission-india/."
-            )
-
-    if intent["is_how_to_apply_query"] and intent["is_btech_query"]:
-        if _CET_SIGNAL.search(answer) and not _SRMJEEE_SIGNAL.search(answer):
-            answer += (
-                "\n\n**Note:** For B.Tech admissions at SRMIST, the primary route is through "
-                "**SRMJEEE (UG)**. Please verify the latest B.Tech application steps at "
-                "https://www.srmist.edu.in/admission-india/."
-            )
-
-    if intent["is_admission_date_query"]:
-        detected_intent = "admission_date"
-    elif intent["is_how_to_apply_query"]:
-        detected_intent = "how_to_apply"
-    elif is_admission_query:
-        detected_intent = "admission_query"
-    else:
-        detected_intent = query_type
-
-    log.info(f"Total query time: {time.time() - t0:.2f}s | Intent: {detected_intent}")
-    return {"answer": answer, "sources": sources, "intent": detected_intent}
-
-
-def query_rag_v2(
-    question: str,
-    *,
-    campus: str | None = None,
-    conversation_context: str = "",
     pinned_context: dict | None = None,
 ) -> dict:
     log.info(f"Query: {question!r}")
@@ -1875,7 +1667,7 @@ def query_rag_v2(
         return {
             "answer": (
                 "Hello! I'm the SRMIST Assistant. "
-                "Ask me anything about SRM â€” admissions, fees, courses, departments, events, campus life, placements, research, and more!"
+                “Ask me anything about SRM — admissions, fees, courses, departments, events, campus life, placements, research, and more!”
             ),
             "sources": [],
             "intent": "greeting",
@@ -1925,28 +1717,18 @@ def query_rag_v2(
                 kg_grounding = kg_answer
                 log.info(f"KG role answer found: {kg_grounding}")
 
-    if not kg_grounding and route.routing_target == "admissions":
+    if not kg_grounding and is_admission_query:
         admission_profiles = get_admission_profiles()
         if kg and admission_profiles:
-            structured_admission = answer_admission_question(
+            kg_admission_context = extract_admission_context(
                 processed_question,
                 campus=resolved_campus,
                 kg=kg,
                 profiles=admission_profiles,
             )
-            if structured_admission:
-                log.info("Structured admission answer found.")
-                freshness = structured_admission.get("freshness", "") or ""
-                metadata = route.to_metadata(freshness=freshness or None)
-                return {
-                    "answer": structured_admission.get("answer", "") or _FALLBACK_NO_CONTEXT,
-                    "sources": structured_admission.get("sources", []),
-                    "intent": structured_admission.get("intent", "admission_query"),
-                    "campus": structured_admission.get("campus") or resolved_campus,
-                    "program": structured_admission.get("program") or route.entities.get("program"),
-                    "confidence": metadata.get("confidence"),
-                    "query_metadata": metadata,
-                }
+            if kg_admission_context:
+                log.info("Admission KG context injected into prompt.")
+                kg_grounding = kg_admission_context
 
     chunks = retrieve(
         retrieval_query,
@@ -1969,20 +1751,9 @@ def query_rag_v2(
             )
     chunks = filter_chunks_for_intent(chunks, intent, processed_question)
 
-    if not chunks:
-        metadata = route.to_metadata()
-        if kg_grounding:
-            log.info("No vector results but KG has an answer; using KG-only response.")
-            return {
-                "answer": kg_grounding,
-                "sources": [],
-                "intent": query_type,
-                "campus": resolved_campus,
-                "program": route.entities.get("program"),
-                "confidence": metadata.get("confidence"),
-                "query_metadata": metadata,
-            }
+    if not chunks and not kg_grounding:
         log.warning(f"No context retrieved for: {question!r}")
+        metadata = route.to_metadata()
         return {
             "answer": _FALLBACK_NO_CONTEXT,
             "sources": [],
@@ -1992,6 +1763,7 @@ def query_rag_v2(
             "confidence": metadata.get("confidence"),
             "query_metadata": metadata,
         }
+    # If kg_grounding exists (even with no vector chunks), fall through to LLM
 
     log.info(f"Retrieved {len(chunks)} chunks in {time.time() - t0:.2f}s")
     freshness = _summarize_chunk_freshness(chunks)
@@ -2165,7 +1937,6 @@ def query_rag_v2(
     }
 
 
-query_rag = query_rag_v2
 
 
 # ================= MAIN =================

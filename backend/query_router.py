@@ -95,6 +95,8 @@ _CAMPUS_ALIASES = {
     "ncr": "Delhi-NCR",
     "tiruchirappalli": "Tiruchirappalli",
     "trichy": "Tiruchirappalli",
+    "sikkim": "Sikkim",
+    "skm": "Sikkim",
 }
 
 

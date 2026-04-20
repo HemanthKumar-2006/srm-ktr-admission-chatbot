@@ -27,7 +27,14 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Optional
 
-from backend.admission_profiles import integrate_admissions
+import csv as _csv
+
+from backend.admission_profiles import (
+    integrate_admissions,
+    _normalize_program_text,
+    _program_tokens,
+    _token_overlap,
+)
 
 log = logging.getLogger("srm_chatbot.kg")
 
@@ -2825,6 +2832,102 @@ def build_knowledge_graph(pages: list[dict]) -> KnowledgeGraph:
 
     log.info(f"KG built: {kg.stats()}")
     return kg
+
+
+# ---------------------------------------------------------------------------
+# Program CSV enrichment
+# ---------------------------------------------------------------------------
+
+def load_programs_from_csv(csv_path: str | Path, kg: "KnowledgeGraph") -> int:
+    """Enrich existing KG program entities (or create new ones) from the programs CSV.
+
+    Expected CSV columns: Title, URL, Duration, Annual Fees, Intake
+    Returns the number of entities created or updated.
+    """
+    csv_path = Path(csv_path)
+    if not csv_path.exists():
+        log.warning(f"Programs CSV not found: {csv_path}")
+        return 0
+
+    # Collect all existing program entities with pre-computed token sets for matching
+    existing_programs: list[tuple[str, frozenset[str]]] = [
+        (eid, frozenset(_program_tokens(entity.name)))
+        for eid, entity in kg.entities.items()
+        if entity.entity_type == "program"
+    ]
+
+    updated = 0
+    created = 0
+
+    with open(csv_path, encoding="utf-8-sig") as f:
+        reader = _csv.DictReader(f)
+        for row in reader:
+            title = (row.get("Title") or "").strip()
+            url = (row.get("URL") or "").strip()
+            duration = (row.get("Duration") or "").strip()
+            fees = (row.get("Annual Fees") or "").strip()
+            intake = (row.get("Intake") or "").strip()
+
+            if not title:
+                continue
+
+            csv_tokens = frozenset(_program_tokens(title))
+            if not csv_tokens:
+                continue
+
+            # Find best-matching existing entity
+            best_eid: str | None = None
+            best_score = 0.0
+            for eid, entity_tokens in existing_programs:
+                score = _token_overlap(csv_tokens, entity_tokens)
+                if score > best_score:
+                    best_score = score
+                    best_eid = eid
+
+            if best_eid and best_score >= 0.5:
+                entity = kg.entities[best_eid]
+                # Enrich: set URL if missing, always update fees/duration/intake
+                if not entity.url and url:
+                    entity.url = url
+                entity.attributes.setdefault("csv_url", url)
+                if fees:
+                    entity.attributes["annual_fees"] = fees
+                if duration:
+                    entity.attributes["duration"] = duration
+                if intake:
+                    entity.attributes["intake"] = intake
+                updated += 1
+            elif url:
+                # Create a new program entity from the CSV row
+                slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+                new_id = f"program--{slug}"
+                # Avoid ID collisions
+                if new_id in kg.entities:
+                    new_id = f"program--csv-{slug}"
+                new_entity = Entity(
+                    id=new_id,
+                    name=title,
+                    entity_type="program",
+                    campus="KTR",
+                    url=url,
+                    attributes={
+                        "csv_url": url,
+                        "annual_fees": fees,
+                        "duration": duration,
+                        "intake": intake,
+                        "source": "programs_csv",
+                    },
+                )
+                kg.add_entity(new_entity)
+                # Refresh existing_programs list so subsequent rows can match this new entity
+                existing_programs.append((new_id, csv_tokens))
+                created += 1
+
+    log.info(
+        f"Programs CSV enrichment: {updated} entities updated, {created} new entities created "
+        f"(from {csv_path.name})"
+    )
+    return updated + created
 
 
 # ---------------------------------------------------------------------------

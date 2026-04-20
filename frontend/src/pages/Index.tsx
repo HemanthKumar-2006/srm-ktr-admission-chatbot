@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, ExternalLink, MapPin, RefreshCw, Plus, Pin, X, Info } from "lucide-react";
+import { Send, ExternalLink, MapPin, RefreshCw, Plus } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -16,8 +16,6 @@ interface Message {
   campus?: string | null;
   program?: string | null;
   sources?: ApiSource[];
-  confidence?: number | null;
-  queryMetadata?: QueryMetadata | null;
 }
 
 interface ApiSource {
@@ -32,37 +30,10 @@ interface ChatApiResponse {
   intent?: string;
   campus?: string | null;
   program?: string | null;
-  confidence?: number | null;
-  query_metadata?: QueryMetadata | null;
-}
-
-interface QueryMetadata {
-  domain?: string | null;
-  task?: string | null;
-  routing_target?: string | null;
-  confidence?: number | null;
-  entities?: Record<string, unknown>;
-  freshness?: string | null;
-  used_pinned_context?: boolean;
-  decomposed?: boolean;
-}
-
-interface PinnedContext {
-  type: "campus" | "program" | "department";
-  value: string;
-  entityId?: string | null;
-  displayName?: string | null;
 }
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 const SRM_LOGO = "/srm-logo.png";
-const CAMPUS_LABELS: Record<string, string> = {
-  KTR: "Kattankulathur",
-  Ramapuram: "Ramapuram",
-  Vadapalani: "Vadapalani",
-  "Delhi-NCR": "Delhi-NCR (Ghaziabad)",
-  Tiruchirappalli: "Tiruchirappalli",
-};
 
 const SUGGESTION_SETS = [
   [
@@ -126,61 +97,6 @@ const stripInlineSourcesBlock = (text: string): string => {
   }
 
   return cleaned.trim();
-};
-
-const formatMetadataValue = (value: unknown): string => {
-  if (Array.isArray(value)) return value.map((item) => String(item)).join(", ");
-  if (value == null) return "";
-  if (typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    const preferred =
-      record.display_name ??
-      record.name ??
-      record.value ??
-      record.label ??
-      record.id;
-    if (preferred != null) return String(preferred);
-    try {
-      return JSON.stringify(record);
-    } catch {
-      return String(record);
-    }
-  }
-  return String(value);
-};
-
-const normalizePinnedContext = (context: PinnedContext | null) => {
-  if (!context) return undefined;
-  return {
-    type: context.type,
-    value: context.value,
-    entity_id: context.entityId ?? undefined,
-    display_name: context.displayName ?? undefined,
-  };
-};
-
-const buildPinnedContextFromEntity = (
-  type: PinnedContext["type"],
-  value: unknown,
-): PinnedContext | null => {
-  const displayValue = formatMetadataValue(value).trim();
-  if (!displayValue) return null;
-
-  if (typeof value === "object" && value != null && !Array.isArray(value)) {
-    const record = value as Record<string, unknown>;
-    return {
-      type,
-      value: String(record.value ?? record.name ?? record.display_name ?? displayValue),
-      entityId: record.id != null ? String(record.id) : null,
-      displayName: displayValue,
-    };
-  }
-
-  return {
-    type,
-    value: displayValue,
-    displayName: displayValue,
-  };
 };
 
 const renderMarkdown = (text: string, sources: ApiSource[] = []) => {
@@ -273,7 +189,6 @@ const Index = () => {
   const [selectedCampus, setSelectedCampus] = useState("KTR");
   const [suggestionSet, setSuggestionSet] = useState(0);
   const [sessionId, setSessionId] = useState(() => crypto.randomUUID());
-  const [pinnedContext, setPinnedContext] = useState<PinnedContext | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const isWelcome = messages.length === 0;
@@ -303,7 +218,6 @@ const Index = () => {
           query: userText,
           campus: selectedCampus,
           session_id: sessionId,
-          pinned_context: normalizePinnedContext(pinnedContext),
         }),
         signal: controller.signal,
       });
@@ -323,8 +237,6 @@ const Index = () => {
           campus: data.campus,
           program: data.program,
           sources: normalizeSources(data.sources),
-          confidence: data.confidence,
-          queryMetadata: data.query_metadata,
         },
       ]);
     } catch (err) {
@@ -357,11 +269,6 @@ const Index = () => {
     setInput("");
     setIsTyping(false);
     setSessionId(crypto.randomUUID());
-    setPinnedContext(null);
-  };
-
-  const handlePinContext = (context: PinnedContext) => {
-    setPinnedContext(context);
   };
 
   const currentSuggestions = SUGGESTION_SETS[suggestionSet];
@@ -409,40 +316,10 @@ const Index = () => {
               <SelectItem value="Tiruchirappalli">Tiruchirappalli</SelectItem>
             </SelectContent>
           </Select>
-          <button
-            onClick={() =>
-              handlePinContext({
-                type: "campus",
-                value: selectedCampus,
-                displayName: CAMPUS_LABELS[selectedCampus] || selectedCampus,
-              })
-            }
-            className="inline-flex items-center gap-1.5 rounded-xl bg-white/70 backdrop-blur-md border border-gray-200 shadow-sm px-3 py-2 text-xs font-medium text-gray-700 hover:bg-white/80 transition-colors"
-          >
-            <Pin className="w-3.5 h-3.5 text-blue-500" />
-            Pin selected campus
-          </button>
         </div>
       </header>
 
       <div className="h-full flex flex-col items-center px-4 pb-4 pt-28 min-h-0 overflow-hidden">
-        {pinnedContext && (
-          <div className="w-full max-w-2xl mb-3">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/80 border border-gray-200 shadow-sm px-4 py-2 text-xs text-gray-700">
-              <Pin className="w-3.5 h-3.5 text-blue-500" />
-              <span>
-                Pinned {pinnedContext.type}: {pinnedContext.displayName || pinnedContext.value}
-              </span>
-              <button
-                onClick={() => setPinnedContext(null)}
-                className="inline-flex items-center justify-center rounded-full hover:bg-gray-100 p-0.5 transition-colors"
-                aria-label="Remove pinned context"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
         {isWelcome ? (
           <div className="flex flex-col items-center justify-center flex-1 w-full max-w-2xl gap-6">
             <div
@@ -541,151 +418,6 @@ const Index = () => {
                       {msg.isUser ? msg.content : renderMarkdown(msg.content, msg.sources)}
                     </div>
                   </div>
-                  {!msg.isUser && msg.confidence != null && (
-                    <div className="ml-9 mt-1 flex items-center gap-1.5">
-                      <div
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          msg.confidence >= 0.7
-                            ? "bg-green-500"
-                            : msg.confidence >= 0.4
-                            ? "bg-yellow-500"
-                            : "bg-red-400"
-                        }`}
-                      />
-                      <span className="text-[10px] text-gray-400">
-                        {Math.round(msg.confidence * 100)}% confidence
-                      </span>
-                    </div>
-                  )}
-                  {!msg.isUser && msg.queryMetadata && (
-                    <details className="mt-1 px-2 group ml-9 max-w-[80%] rounded-xl border border-gray-200 bg-white/70">
-                      <summary className="cursor-pointer list-none px-3 py-2 text-[11px] text-gray-600 hover:text-gray-800 select-none inline-flex items-center gap-1.5 w-full">
-                        <span className="inline-block transition-transform group-open:rotate-90">▶</span>
-                        <Info className="w-3.5 h-3.5 text-blue-500" />
-                        Query details
-                      </summary>
-                      <div className="px-3 pb-3 space-y-3 text-xs text-gray-600">
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                          {msg.queryMetadata.domain && (
-                            <div className="rounded-lg bg-gray-50 px-2.5 py-2">
-                              <div className="text-[10px] uppercase tracking-wide text-gray-400">Domain</div>
-                              <div className="font-medium text-gray-700">{msg.queryMetadata.domain}</div>
-                            </div>
-                          )}
-                          {msg.queryMetadata.task && (
-                            <div className="rounded-lg bg-gray-50 px-2.5 py-2">
-                              <div className="text-[10px] uppercase tracking-wide text-gray-400">Task</div>
-                              <div className="font-medium text-gray-700">{msg.queryMetadata.task}</div>
-                            </div>
-                          )}
-                          {msg.queryMetadata.routing_target && (
-                            <div className="rounded-lg bg-gray-50 px-2.5 py-2">
-                              <div className="text-[10px] uppercase tracking-wide text-gray-400">Route</div>
-                              <div className="font-medium text-gray-700">{msg.queryMetadata.routing_target}</div>
-                            </div>
-                          )}
-                          {msg.queryMetadata.confidence != null && (
-                            <div className="rounded-lg bg-gray-50 px-2.5 py-2">
-                              <div className="text-[10px] uppercase tracking-wide text-gray-400">Router confidence</div>
-                              <div className="font-medium text-gray-700">
-                                {Math.round(msg.queryMetadata.confidence * 100)}%
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {msg.queryMetadata.entities &&
-                          Object.entries(msg.queryMetadata.entities).length > 0 && (
-                            <div className="space-y-2">
-                              <div className="text-[10px] uppercase tracking-wide text-gray-400">Matched entities</div>
-                              <div className="flex flex-wrap gap-2">
-                                {Object.entries(msg.queryMetadata.entities).map(([key, value]) => (
-                                  <span
-                                    key={`${msg.id}-entity-${key}`}
-                                    className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-700"
-                                  >
-                                    {key}: {formatMetadataValue(value)}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                        {(msg.queryMetadata.decomposed || msg.queryMetadata.used_pinned_context) && (
-                          <div className="flex flex-wrap gap-2">
-                            {msg.queryMetadata.decomposed && (
-                              <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">
-                                Decomposed query
-                              </span>
-                            )}
-                            {msg.queryMetadata.used_pinned_context && (
-                              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
-                                Used pinned context
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {msg.queryMetadata.freshness && (
-                          <div className="rounded-lg bg-gray-50 px-2.5 py-2">
-                            <div className="text-[10px] uppercase tracking-wide text-gray-400">Freshness</div>
-                            <div className="font-medium text-gray-700">{msg.queryMetadata.freshness}</div>
-                          </div>
-                        )}
-
-                        <div className="flex flex-wrap gap-2">
-                          {(() => {
-                            const campusContext = buildPinnedContextFromEntity(
-                              "campus",
-                              msg.queryMetadata.entities?.campus,
-                            );
-                            return campusContext ? (
-                              <button
-                                type="button"
-                                onClick={() => handlePinContext(campusContext)}
-                                className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50"
-                              >
-                                <Pin className="w-3 h-3 text-blue-500" />
-                                Pin campus
-                              </button>
-                            ) : null;
-                          })()}
-                          {(() => {
-                            const programContext = buildPinnedContextFromEntity(
-                              "program",
-                              msg.queryMetadata.entities?.program,
-                            );
-                            return programContext ? (
-                              <button
-                                type="button"
-                                onClick={() => handlePinContext(programContext)}
-                                className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50"
-                              >
-                                <Pin className="w-3 h-3 text-blue-500" />
-                                Pin program
-                              </button>
-                            ) : null;
-                          })()}
-                          {(() => {
-                            const departmentContext = buildPinnedContextFromEntity(
-                              "department",
-                              msg.queryMetadata.entities?.department,
-                            );
-                            return departmentContext ? (
-                              <button
-                                type="button"
-                                onClick={() => handlePinContext(departmentContext)}
-                                className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50"
-                              >
-                                <Pin className="w-3 h-3 text-blue-500" />
-                                Pin department
-                              </button>
-                            ) : null;
-                          })()}
-                        </div>
-                      </div>
-                    </details>
-                  )}
                   {!msg.isUser && msg.sources && msg.sources.length > 0 && (
                     <details className="mt-1 px-2 group ml-9 max-w-[80%]">
                       <summary className="cursor-pointer list-none text-[11px] text-gray-500 hover:text-gray-700 select-none inline-flex items-center gap-1">

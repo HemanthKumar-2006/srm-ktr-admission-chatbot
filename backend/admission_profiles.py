@@ -337,6 +337,136 @@ def answer_admission_question(
     return None
 
 
+def extract_admission_context(
+    question: str,
+    *,
+    campus: str | None,
+    kg: Any,
+    profiles: dict[str, dict],
+) -> str:
+    """Return a plain-text KG context block for admission queries.
+
+    Unlike answer_admission_question(), this never bypasses the LLM — it only
+    produces structured facts that get injected into the RAG prompt.
+    Never falls back to the generic root-level admission response.
+    Returns "" when no specific program or scope can be matched.
+    """
+    if not kg or not profiles:
+        return ""
+
+    q_low = (question or "").strip().lower()
+    if not q_low:
+        return ""
+
+    selected_campus = _detect_campus(q_low) or campus
+    route = _detect_route(q_low)
+    requested_fields = _detect_requested_fields(q_low)
+    if not requested_fields:
+        requested_fields = {"how_to_apply", "eligibility", "important_dates", "fees"}
+
+    program_match = _match_program_text(kg, q_low) if _has_specific_program_hint(q_low) else None
+    scope_matches = _match_admission_scope_entities(kg, q_low, route)
+
+    parts: list[str] = []
+
+    if program_match:
+        entity = kg.entities.get(program_match["program_id"])
+        if entity:
+            parts.append(f"Program: {entity.name}")
+            # Use CSV-enriched URL if available
+            prog_url = entity.attributes.get("csv_url") or entity.url
+            if prog_url:
+                parts.append(f"Program page: {prog_url}")
+            fees = entity.attributes.get("annual_fees")
+            if fees:
+                parts.append(f"Annual fees: {fees}")
+            duration = entity.attributes.get("duration")
+            if duration:
+                parts.append(f"Duration: {duration}")
+            intake = entity.attributes.get("intake")
+            if intake:
+                parts.append(f"Intake: {intake} seats")
+
+        admission_ids = _find_program_admissions(kg, program_match["program_id"], route)
+        if not admission_ids and scope_matches:
+            admission_ids = [scope_matches[0].id]
+        if not admission_ids:
+            admission_ids = ([ROUTE_ROOT_IDS[route]] if route else list(ROUTE_ROOT_IDS.values()))[:1]
+
+        for admission_id in admission_ids:
+            profile = profiles.get(admission_id)
+            if not profile:
+                continue
+            row = _find_best_row(profile.get("program_rows", []), program_match["program_id"], selected_campus)
+
+            if "how_to_apply" in requested_fields:
+                exam = row.get("exam") if row else ""
+                if exam:
+                    parts.append(f"Admission exam: {exam}")
+                apply_url = row.get("apply_url") if row else ""
+                if not apply_url:
+                    apply_url = _infer_apply_url(
+                        profile.get("apply_links", []),
+                        entity.name if entity else "",
+                        entity.name if entity else "",
+                        route=profile.get("route"),
+                    )
+                if apply_url:
+                    parts.append(f"Apply at: {apply_url}")
+                how_text = profile.get("how_to_apply", {}).get("text", "")
+                if how_text:
+                    parts.append(f"How to apply: {_excerpt(how_text, 200)}")
+
+            if "eligibility" in requested_fields:
+                eligibility = ""
+                if row and row.get("eligibility_override"):
+                    eligibility = row["eligibility_override"]
+                elif profile.get("eligibility", {}).get("text"):
+                    eligibility = profile["eligibility"]["text"]
+                elif profile.get("criteria", {}).get("text"):
+                    eligibility = profile["criteria"]["text"]
+                if eligibility:
+                    parts.append(f"Eligibility: {_excerpt(eligibility, 220)}")
+
+            if "important_dates" in requested_fields:
+                dates_text = profile.get("important_dates", {}).get("text", "")
+                if dates_text:
+                    parts.append(f"Important dates: {_excerpt(dates_text, 280)}")
+
+            if "fees" in requested_fields:
+                fees_text = profile.get("fees", {}).get("text", "")
+                if fees_text:
+                    parts.append(f"Fees info: {_excerpt(fees_text, 180)}")
+
+            source_url = profile.get("source_url", "")
+            if source_url:
+                parts.append(f"Admission page: {source_url}")
+            break  # one profile is enough
+
+    elif scope_matches:
+        for ent in scope_matches[:1]:
+            profile = profiles.get(ent.id)
+            if not profile:
+                continue
+            apply_url = _pick_first_link(profile.get("apply_links", []))
+            if apply_url:
+                parts.append(f"Apply at: {apply_url}")
+            eligibility = profile.get("eligibility", {}).get("text", "")
+            if eligibility:
+                parts.append(f"Eligibility: {_excerpt(eligibility, 220)}")
+            dates_text = profile.get("important_dates", {}).get("text", "")
+            if dates_text:
+                parts.append(f"Important dates: {_excerpt(dates_text, 280)}")
+            source_url = profile.get("source_url", "")
+            if source_url:
+                parts.append(f"Admission page: {source_url}")
+
+    if not parts:
+        return ""
+
+    return "[Admission Knowledge Graph]\n" + "\n".join(parts)
+
+
 def _build_profile(
     *,
     admission_id: str,
@@ -739,9 +869,6 @@ def _build_program_answer(
     sources = [profile["source_url"]]
     fields = requested_fields or {"how_to_apply", "eligibility", "important_dates", "fees"}
 
-    if confidence < 0.6:
-        lines.append("Program-level mapping is not fully confirmed, so I am using the closest matching admissions page.")
-
     if "how_to_apply" in fields:
         apply_bits = []
         exam = row.get("exam") if row else ""
@@ -796,9 +923,6 @@ def _build_program_answer(
 
     if "refund_policy" in fields and profile.get("refund_policy", {}).get("text"):
         lines.append("Refund policy: " + _excerpt(profile["refund_policy"]["text"]))
-
-    if row and row.get("campus"):
-        lines.append(f"Matched campus context: {row['campus']}.")
 
     return "\n".join(lines), _unique(sources)
 
