@@ -1,0 +1,2160 @@
+{
+  "1_isolated_admissions": [
+    {
+      "admission_id": "admission--india--phd",
+      "name": "Admissions — India — PhD",
+      "url": "https://www.srmist.edu.in/admission-india/phd/",
+      "scope_slug": "phd"
+    },
+    {
+      "admission_id": "admission--international--categories-of-international-students",
+      "name": "Admissions — International — Categories of International Students",
+      "url": "https://www.srmist.edu.in/admission-international/categories-of-international-students/",
+      "scope_slug": "categories-of-international-students"
+    },
+    {
+      "admission_id": "admission--international--phd",
+      "name": "Admissions — International — PhD",
+      "url": "https://www.srmist.edu.in/admission-international/phd/",
+      "scope_slug": "phd"
+    },
+    {
+      "admission_id": "admission--international--scholarships",
+      "name": "Admissions — International — International Scholarships",
+      "url": "https://www.srmist.edu.in/admission-international/scholarships/",
+      "scope_slug": "scholarships"
+    },
+    {
+      "admission_id": "admission--international--science-humanities",
+      "name": "Admissions — International — Science & Humanities",
+      "url": "https://www.srmist.edu.in/admission-international/science-humanities/",
+      "scope_slug": "science-humanities"
+    }
+  ],
+  "2_unlinked_programs": [
+    {
+      "program_id": "program--additive-manufacturing",
+      "name": "Minor Degree in Additive Manufacturing",
+      "url": "https://www.srmist.edu.in/program/additive-manufacturing/",
+      "parents": [
+        "department--department-of-mechanical-engineering"
+      ],
+      "parent_names": [
+        "Mechanical Engineering"
+      ]
+    },
+    {
+      "program_id": "program--artificial-intelligence-and-machine-learning",
+      "name": "Minor Degree in Artificial Intelligence and Machine Learning",
+      "url": "https://www.srmist.edu.in/program/artificial-intelligence-and-machine-learning/",
+      "parents": [
+        "department--department-of-computational-intelligence"
+      ],
+      "parent_names": [
+        "Computational Intelligence"
+      ]
+    },
+    {
+      "program_id": "program--assistive-technology-engineering",
+      "name": "Minor Degree in Assistive Technology Engineering",
+      "url": "https://www.srmist.edu.in/program/assistive-technology-engineering/",
+      "parents": [
+        "department--department-of-biomedical-engineering"
+      ],
+      "parent_names": [
+        "Biomedical Engineering"
+      ]
+    },
+    {
+      "program_id": "program--automation-and-robotics",
+      "name": "B.Tech Automation and Robotics",
+      "url": "https://www.srmist.edu.in/program/automation-and-robotics/",
+      "parents": [
+        "department--department-of-mechatronics"
+      ],
+      "parent_names": [
+        "Mechatronics"
+      ]
+    },
+    {
+      "program_id": "program--automation-in-electronics-manufacturing",
+      "name": "Minor Degree in Automation in Electronics Manufacturing",
+      "url": "https://www.srmist.edu.in/program/automation-in-electronics-manufacturing/",
+      "parents": [
+        "department--department-of-mechatronics"
+      ],
+      "parent_names": [
+        "Mechatronics"
+      ]
+    },
+    {
+      "program_id": "program--bca-genrative-artificial-intelligence",
+      "name": "BCA in Generative AI",
+      "url": "https://www.srmist.edu.in/program/bca-genrative-artificial-intelligence/",
+      "parents": [
+        "department--department-of-computer-applications"
+      ],
+      "parent_names": [
+        "Computer Applications"
+      ]
+    },
+    {
+      "program_id": "program--best-b-com-accounting-finance-colleges-chennai",
+      "name": "B.Com. Accounting & Finance",
+      "url": "https://www.srmist.edu.in/program/best-b-com-accounting-finance-colleges-chennai/",
+      "parents": [
+        "department--department-of-corporate-secretaryship-and-accounting-finance"
+      ],
+      "parent_names": [
+        "Corporate Secretaryship and Accounting & Finance"
+      ]
+    },
+    {
+      "program_id": "program--best-b-sc-computer-science-colleges-chennai",
+      "name": "B.Sc Computer Science degree",
+      "url": "https://www.srmist.edu.in/program/best-b-sc-computer-science-colleges-chennai/",
+      "parents": [
+        "department--department-of-computer-science"
+      ],
+      "parent_names": [
+        "Computer Science"
+      ]
+    },
+    {
+      "program_id": "program--best-b-sc-visual-communication-degree-in-chennai",
+      "name": "B.Sc. Visual Communication",
+      "url": "https://www.srmist.edu.in/program/best-b-sc-visual-communication-degree-in-chennai/",
+      "parents": [
+        "department--department-of-visual-communication"
+      ],
+      "parent_names": [
+        "Visual Communication"
+      ]
+    },
+    {
+      "program_id": "program--best-m-a-journalism-and-mass-communication-colleges-in-chennai",
+      "name": "M.A. Journalism and Mass Communication",
+      "url": "https://www.srmist.edu.in/program/best-m-a-journalism-and-mass-communication-colleges-in-chennai/",
+      "parents": [
+        "department--department-of-journalism-and-mass-communication"
+      ],
+      "parent_names": [
+        "Journalism And Mass Communication"
+      ]
+    },
+    {
+      "program_id": "program--best-m-com-accounting-finance-colleges-chennai",
+      "name": "M.Com. Accounting & Finance",
+      "url": "https://www.srmist.edu.in/program/best-m-com-accounting-finance-colleges-chennai/",
+      "parents": [
+        "department--department-of-corporate-secretaryship-and-accounting-finance"
+      ],
+      "parent_names": [
+        "Corporate Secretaryship and Accounting & Finance"
+      ]
+    },
+    {
+      "program_id": "program--best-m-sc-biochemistry-colleges-chennai",
+      "name": "M.Sc. Biochemistry",
+      "url": "https://www.srmist.edu.in/program/best-m-sc-biochemistry-colleges-chennai/",
+      "parents": [
+        "department--department-of-biochemistry"
+      ],
+      "parent_names": [
+        "Biochemistry"
+      ]
+    },
+    {
+      "program_id": "program--best-m-sc-chemistry-colleges-chennai",
+      "name": "M.Sc. Chemistry",
+      "url": "https://www.srmist.edu.in/program/best-m-sc-chemistry-colleges-chennai/",
+      "parents": [
+        "department--department-of-chemistry"
+      ],
+      "parent_names": [
+        "Chemistry"
+      ]
+    },
+    {
+      "program_id": "program--best-m-sc-computer-science-colleges-in-chennai",
+      "name": "M.Sc Computer Science in Chennai",
+      "url": "https://www.srmist.edu.in/program/best-m-sc-computer-science-colleges-in-chennai/",
+      "parents": [
+        "department--department-of-computer-science"
+      ],
+      "parent_names": [
+        "Computer Science"
+      ]
+    },
+    {
+      "program_id": "program--best-m-sc-mathematics-colleges-chennai",
+      "name": "M.Sc. Mathematics",
+      "url": "https://www.srmist.edu.in/program/best-m-sc-mathematics-colleges-chennai/",
+      "parents": [
+        "department--department-of-mathematics-and-statistics"
+      ],
+      "parent_names": [
+        "Mathematics and Statistics"
+      ]
+    },
+    {
+      "program_id": "program--best-m-sc-physics-colleges-in-chennai",
+      "name": "M.Sc. Physics",
+      "url": "https://www.srmist.edu.in/program/best-m-sc-physics-colleges-in-chennai/",
+      "parents": [
+        "department--department-of-physics-and-nanotechnology"
+      ],
+      "parent_names": [
+        "Physics and Nanotechnology"
+      ]
+    },
+    {
+      "program_id": "program--biosustainability",
+      "name": "Minor Degree in Biosustainability",
+      "url": "https://www.srmist.edu.in/program/biosustainability/",
+      "parents": [
+        "department--department-of-mechatronics"
+      ],
+      "parent_names": [
+        "Mechatronics"
+      ]
+    },
+    {
+      "program_id": "program--b-a-english-2",
+      "name": "B.A. English",
+      "url": "https://www.srmist.edu.in/program/b-a-english-2/",
+      "parents": [
+        "department--department-of-english"
+      ],
+      "parent_names": [
+        "English"
+      ]
+    },
+    {
+      "program_id": "program--b-b-a-business-administration",
+      "name": "BBA. Business Administration",
+      "url": "https://www.srmist.edu.in/program/b-b-a-business-administration/",
+      "parents": [
+        "department--department-of-management"
+      ],
+      "parent_names": [
+        "Management"
+      ]
+    },
+    {
+      "program_id": "program--b-ed-commerce-accounting",
+      "name": "B.Ed. Commerce & Accounting",
+      "url": "https://www.srmist.edu.in/program/b-ed-commerce-accounting/",
+      "parents": [
+        "department--school-of-education"
+      ],
+      "parent_names": [
+        "School of Education"
+      ]
+    },
+    {
+      "program_id": "program--b-ed-computer-science",
+      "name": "B.Ed. Computer Science",
+      "url": "https://www.srmist.edu.in/program/b-ed-computer-science/",
+      "parents": [
+        "department--school-of-education"
+      ],
+      "parent_names": [
+        "School of Education"
+      ]
+    },
+    {
+      "program_id": "program--b-ed-economics",
+      "name": "B.Ed. Economics",
+      "url": "https://www.srmist.edu.in/program/b-ed-economics/",
+      "parents": [
+        "department--school-of-education"
+      ],
+      "parent_names": [
+        "School of Education"
+      ]
+    },
+    {
+      "program_id": "program--b-ed-english",
+      "name": "B.Ed. English",
+      "url": "https://www.srmist.edu.in/program/b-ed-english/",
+      "parents": [
+        "department--school-of-education"
+      ],
+      "parent_names": [
+        "School of Education"
+      ]
+    },
+    {
+      "program_id": "program--b-ed-mathematics",
+      "name": "B.Ed. Mathematics",
+      "url": "https://www.srmist.edu.in/program/b-ed-mathematics/",
+      "parents": [
+        "department--school-of-education"
+      ],
+      "parent_names": [
+        "School of Education"
+      ]
+    },
+    {
+      "program_id": "program--b-ed-physical-science",
+      "name": "B.Ed. Physical Science",
+      "url": "https://www.srmist.edu.in/program/b-ed-physical-science/",
+      "parents": [
+        "department--school-of-education"
+      ],
+      "parent_names": [
+        "School of Education"
+      ]
+    },
+    {
+      "program_id": "program--b-ed-social-science",
+      "name": "B.Ed. Social Science",
+      "url": "https://www.srmist.edu.in/program/b-ed-social-science/",
+      "parents": [
+        "department--school-of-education"
+      ],
+      "parent_names": [
+        "School of Education"
+      ]
+    },
+    {
+      "program_id": "program--b-ed-tamil",
+      "name": "B.Ed. Tamil",
+      "url": "https://www.srmist.edu.in/program/b-ed-tamil/",
+      "parents": [
+        "department--school-of-education"
+      ],
+      "parent_names": [
+        "School of Education"
+      ]
+    },
+    {
+      "program_id": "program--b-sc-cardio-perfusion-technology",
+      "name": "B.Sc. Cardio Perfusion Technology",
+      "url": "https://www.srmist.edu.in/program/b-sc-cardio-perfusion-technology/",
+      "parents": [
+        "department--medical-cardiovascular-and-thoracic-surgery"
+      ],
+      "parent_names": [
+        "Cardio Vascular & Thoracic Surgery"
+      ]
+    },
+    {
+      "program_id": "program--b-sc-critical-care-technology",
+      "name": "B.Sc. Critical Care Technology",
+      "url": "https://www.srmist.edu.in/program/b-sc-critical-care-technology/",
+      "parents": [
+        "department--medical-critical-care-medicine"
+      ],
+      "parent_names": [
+        "Critical Care Medicine"
+      ]
+    },
+    {
+      "program_id": "program--b-sc-economics",
+      "name": "B.Sc. Economics",
+      "url": "https://www.srmist.edu.in/program/b-sc-economics/",
+      "parents": [
+        "department--department-of-economics"
+      ],
+      "parent_names": [
+        "Economics"
+      ]
+    },
+    {
+      "program_id": "program--b-sc-hons-agriculture",
+      "name": "B.Sc. (Hons.) Agriculture 2026",
+      "url": "https://www.srmist.edu.in/program/b-sc-hons-agriculture/",
+      "parents": [
+        "department--department-of-agronomy"
+      ],
+      "parent_names": [
+        "Agronomy"
+      ]
+    },
+    {
+      "program_id": "program--b-sc-hons-horticulture",
+      "name": "B.Sc (Hons) Horticulture",
+      "url": "https://www.srmist.edu.in/program/b-sc-hons-horticulture/",
+      "parents": [
+        "department--department-of-horticulture"
+      ],
+      "parent_names": [
+        "Horticulture"
+      ]
+    },
+    {
+      "program_id": "program--b-sc-nursing",
+      "name": "B.Sc. Nursing",
+      "url": "https://www.srmist.edu.in/program/b-sc-nursing/",
+      "parents": [
+        "sub_college--college-of-nursing"
+      ],
+      "parent_names": [
+        "College of Nursing"
+      ]
+    },
+    {
+      "program_id": "program--b-s-fintech",
+      "name": "B.S Fintech",
+      "url": "https://www.srmist.edu.in/program/b-s-fintech/",
+      "parents": [
+        "department--department-of-management"
+      ],
+      "parent_names": [
+        "Management"
+      ]
+    },
+    {
+      "program_id": "program--b-tech-biotechnology",
+      "name": "B.Tech Biotechnology Course 2026",
+      "url": "https://www.srmist.edu.in/program/b-tech-biotechnology/",
+      "parents": [
+        "department--department-of-biotechnology"
+      ],
+      "parent_names": [
+        "Biotechnology"
+      ]
+    },
+    {
+      "program_id": "program--b-tech-computer-science-and-engineering",
+      "name": "B.Tech Computer Science Engineering 2026",
+      "url": "https://www.srmist.edu.in/program/b-tech-computer-science-and-engineering/",
+      "parents": [
+        "department--department-of-computer-science-and-engineering"
+      ],
+      "parent_names": [
+        "Computer Science and Engineering"
+      ]
+    },
+    {
+      "program_id": "program--b-tech-cse-with-specialization-in-blockchain-technology",
+      "name": "B.Tech CSE Blockchain Technology 2026",
+      "url": "https://www.srmist.edu.in/program/b-tech-cse-with-specialization-in-blockchain-technology/",
+      "parents": [
+        "department--department-of-computer-science-and-engineering"
+      ],
+      "parent_names": [
+        "Computer Science and Engineering"
+      ]
+    },
+    {
+      "program_id": "program--b-tech-cse-with-specialization-in-cloud-computing",
+      "name": "B.Tech CSE Cloud Computing 2026",
+      "url": "https://www.srmist.edu.in/program/b-tech-cse-with-specialization-in-cloud-computing/",
+      "parents": [
+        "department--department-of-computer-science-and-engineering"
+      ],
+      "parent_names": [
+        "Computer Science and Engineering"
+      ]
+    },
+    {
+      "program_id": "program--b-tech-cse-with-specialization-in-big-data-analytics",
+      "name": "B.Tech CSE Big Data Analytics 2026",
+      "url": "https://www.srmist.edu.in/program/b-tech-cse-with-specialization-in-big-data-analytics/",
+      "parents": [
+        "department--department-of-computer-science-and-engineering"
+      ],
+      "parent_names": [
+        "Computer Science and Engineering"
+      ]
+    },
+    {
+      "program_id": "program--b-tech-cse-with-specialization-in-gaming-technology",
+      "name": "B.Tech CSE Gaming Technology 2026",
+      "url": "https://www.srmist.edu.in/program/b-tech-cse-with-specialization-in-gaming-technology/",
+      "parents": [
+        "department--department-of-computer-science-and-engineering"
+      ],
+      "parent_names": [
+        "Computer Science and Engineering"
+      ]
+    },
+    {
+      "program_id": "program--b-tech-cse-with-specialization-in-computer-networking",
+      "name": "B.Tech CSE Computer Networking 2026",
+      "url": "https://www.srmist.edu.in/program/b-tech-cse-with-specialization-in-computer-networking/",
+      "parents": [
+        "department--department-of-computer-science-and-engineering"
+      ],
+      "parent_names": [
+        "Computer Science and Engineering"
+      ]
+    },
+    {
+      "program_id": "program--b-tech-cse-with-specialization-in-internet-of-things",
+      "name": "B.Tech CSE Internet of Things Course 2026",
+      "url": "https://www.srmist.edu.in/program/b-tech-cse-with-specialization-in-internet-of-things/",
+      "parents": [
+        "department--department-of-computer-science-and-engineering"
+      ],
+      "parent_names": [
+        "Computer Science and Engineering"
+      ]
+    },
+    {
+      "program_id": "program--b-tech-cse-with-with-specialization-in-cyber-security",
+      "name": "B.Tech CSE Cyber Security 2026",
+      "url": "https://www.srmist.edu.in/program/b-tech-cse-with-with-specialization-in-cyber-security/",
+      "parents": [
+        "department--department-of-computer-science-and-engineering"
+      ],
+      "parent_names": [
+        "Computer Science and Engineering"
+      ]
+    },
+    {
+      "program_id": "program--b-tech-ece-with-specialization-in-cyber-physical-systems",
+      "name": "Study B.Tech ECE Cyber Physical Systems 2026",
+      "url": "https://www.srmist.edu.in/program/b-tech-ece-with-specialization-in-cyber-physical-systems/",
+      "parents": [
+        "department--department-of-electronics-communication"
+      ],
+      "parent_names": [
+        "Electronics & Communication"
+      ]
+    },
+    {
+      "program_id": "program--b-tech-ece-with-specialization-in-data-sciences",
+      "name": "B.Tech ECE Data Science 2026",
+      "url": "https://www.srmist.edu.in/program/b-tech-ece-with-specialization-in-data-sciences/",
+      "parents": [
+        "department--department-of-data-science-and-business-systems"
+      ],
+      "parent_names": [
+        "Data Science And Business Systems"
+      ]
+    },
+    {
+      "program_id": "program--b-tech-electronics-computer-engineering",
+      "name": "Study B.Tech Electronics & Computer Engineering",
+      "url": "https://www.srmist.edu.in/program/b-tech-electronics-computer-engineering/",
+      "parents": [
+        "department--department-of-electronics-communication"
+      ],
+      "parent_names": [
+        "Electronics & Communication"
+      ]
+    },
+    {
+      "program_id": "program--b-tech-mechatronics-engineering",
+      "name": "Study B.Tech Mechatronics Engineering 2026",
+      "url": "https://www.srmist.edu.in/program/b-tech-mechatronics-engineering/",
+      "parents": [
+        "department--department-of-mechatronics"
+      ],
+      "parent_names": [
+        "Mechatronics"
+      ]
+    },
+    {
+      "program_id": "program--computer-aided-diagnostics",
+      "name": "Minor Degree in Computer-Aided Diagnostics",
+      "url": "https://www.srmist.edu.in/program/computer-aided-diagnostics/",
+      "parents": [
+        "department--department-of-biomedical-engineering"
+      ],
+      "parent_names": [
+        "Biomedical Engineering"
+      ]
+    },
+    {
+      "program_id": "program--computer-science-and-engineering",
+      "name": "Minor Degree in Computer Science and Engineering",
+      "url": "https://www.srmist.edu.in/program/computer-science-and-engineering/",
+      "parents": [
+        "department--department-of-computer-science"
+      ],
+      "parent_names": [
+        "Computer Science"
+      ]
+    },
+    {
+      "program_id": "program--cyber-security",
+      "name": "Minor Degree in Cyber Security",
+      "url": "https://www.srmist.edu.in/program/cyber-security/",
+      "parents": [
+        "department--department-of-networking-and-communications"
+      ],
+      "parent_names": [
+        "Networking And Communications"
+      ]
+    },
+    {
+      "program_id": "program--data-science",
+      "name": "Minor Degree in Data Science",
+      "url": "https://www.srmist.edu.in/program/data-science/",
+      "parents": [
+        "department--department-of-data-science-and-business-systems"
+      ],
+      "parent_names": [
+        "Data Science And Business Systems"
+      ]
+    },
+    {
+      "program_id": "program--drone-technology",
+      "name": "Minor Degree in Drone Technology",
+      "url": "https://www.srmist.edu.in/program/drone-technology/",
+      "parents": [
+        "department--department-of-aerospace-engineering"
+      ],
+      "parent_names": [
+        "Aerospace Engineering"
+      ]
+    },
+    {
+      "program_id": "program--d-m-cardiology",
+      "name": "D.M. Cardiology",
+      "url": "https://www.srmist.edu.in/program/d-m-cardiology/",
+      "parents": [
+        "department--medical-cardiology"
+      ],
+      "parent_names": [
+        "Cardiology"
+      ]
+    },
+    {
+      "program_id": "program--d-m-nephrology",
+      "name": "D.M. Nephrology",
+      "url": "https://www.srmist.edu.in/program/d-m-nephrology/",
+      "parents": [
+        "department--medical-nephrology"
+      ],
+      "parent_names": [
+        "Nephrology"
+      ]
+    },
+    {
+      "program_id": "program--electric-vehicle-technology",
+      "name": "Minor Degree in Electric Vehicle Technology",
+      "url": "https://www.srmist.edu.in/program/electric-vehicle-technology/",
+      "parents": [
+        "department--department-of-electrical-and-electronics-engineering"
+      ],
+      "parent_names": [
+        "Electrical and Electronics Engineering"
+      ]
+    },
+    {
+      "program_id": "program--electronic-cooling",
+      "name": "Minor Degree in Electronic Cooling",
+      "url": "https://www.srmist.edu.in/program/electronic-cooling/",
+      "parents": [
+        "department--department-of-mechanical-engineering"
+      ],
+      "parent_names": [
+        "Mechanical Engineering"
+      ]
+    },
+    {
+      "program_id": "program--embedded-system",
+      "name": "Minor Degree in Embedded System",
+      "url": "https://www.srmist.edu.in/program/embedded-system/",
+      "parents": [
+        "department--department-of-electronics-communication"
+      ],
+      "parent_names": [
+        "Electronics & Communication"
+      ]
+    },
+    {
+      "program_id": "program--full-stack-development",
+      "name": "Minor Degree in Full Stack Development",
+      "url": "https://www.srmist.edu.in/program/full-stack-development/",
+      "parents": [
+        "department--department-of-computer-science-and-engineering"
+      ],
+      "parent_names": [
+        "Computer Science and Engineering"
+      ]
+    },
+    {
+      "program_id": "program--green-energy-and-environmental-engineering",
+      "name": "Minor Degree in Green Energy and Environmental Engineering",
+      "url": "https://www.srmist.edu.in/program/green-energy-and-environmental-engineering/",
+      "parents": [
+        "department--department-of-mechatronics"
+      ],
+      "parent_names": [
+        "Mechatronics"
+      ]
+    },
+    {
+      "program_id": "program--imaging-sciences-and-machine-vision",
+      "name": "Minor Degree in Imaging Sciences and Machine Vision",
+      "url": "https://www.srmist.edu.in/program/imaging-sciences-and-machine-vision/",
+      "parents": [
+        "department--department-of-networking-and-communications"
+      ],
+      "parent_names": [
+        "Networking And Communications"
+      ]
+    },
+    {
+      "program_id": "program--immersive-technologies-2",
+      "name": "Minor Degree in Immersive Technologies",
+      "url": "https://www.srmist.edu.in/program/immersive-technologies-2/",
+      "parents": [
+        "department--department-of-computational-intelligence"
+      ],
+      "parent_names": [
+        "Computational Intelligence"
+      ]
+    },
+    {
+      "program_id": "program--integrated-master-of-public-health",
+      "name": "MPH (Integrated) – Public Health",
+      "url": "https://www.srmist.edu.in/program/integrated-master-of-public-health/",
+      "parents": [
+        "sub_college--school-of-public-health"
+      ],
+      "parent_names": [
+        "School of Public Health"
+      ]
+    },
+    {
+      "program_id": "program--internet-of-things-iot",
+      "name": "Minor Degree in Internet of Things",
+      "url": "https://www.srmist.edu.in/program/internet-of-things-iot/",
+      "parents": [
+        "department--department-of-networking-and-communications"
+      ],
+      "parent_names": [
+        "Networking And Communications"
+      ]
+    },
+    {
+      "program_id": "program--mechatronics-engineering",
+      "name": "Minor Degree in Mechatronics Engineering",
+      "url": "https://www.srmist.edu.in/program/mechatronics-engineering/",
+      "parents": [
+        "department--department-of-mechatronics"
+      ],
+      "parent_names": [
+        "Mechatronics"
+      ]
+    },
+    {
+      "program_id": "program--medical-device-technology",
+      "name": "Minor Degree in Medical Device Technology",
+      "url": "https://www.srmist.edu.in/program/medical-device-technology/",
+      "parents": [
+        "department--department-of-biomedical-engineering"
+      ],
+      "parent_names": [
+        "Biomedical Engineering"
+      ]
+    },
+    {
+      "program_id": "program--minor-degree-in-industrial-automation",
+      "name": "Minor Degree in Industrial Automation",
+      "url": "https://www.srmist.edu.in/program/minor-degree-in-industrial-automation/",
+      "parents": [
+        "department--department-of-electronics-instrumentation"
+      ],
+      "parent_names": [
+        "Electronics & Instrumentation Engineering"
+      ]
+    },
+    {
+      "program_id": "program--minor-degree-in-quantum-technologies",
+      "name": "Minor Degree in Quantum Technologies",
+      "url": "https://www.srmist.edu.in/program/minor-degree-in-quantum-technologies/",
+      "parents": [
+        "department--department-of-physics-and-nanotechnology"
+      ],
+      "parent_names": [
+        "Physics and Nanotechnology"
+      ]
+    },
+    {
+      "program_id": "program--m-ch-cardiothoracic-vascular-surgery",
+      "name": "M.Ch. Cardiothoracic and Vascular Surgery",
+      "url": "https://www.srmist.edu.in/program/m-ch-cardiothoracic-vascular-surgery/",
+      "parents": [
+        "department--medical-cardiovascular-and-thoracic-surgery"
+      ],
+      "parent_names": [
+        "Cardio Vascular & Thoracic Surgery"
+      ]
+    },
+    {
+      "program_id": "program--m-d-anaesthesiology",
+      "name": "M.D. Anaesthesiology",
+      "url": "https://www.srmist.edu.in/program/m-d-anaesthesiology/",
+      "parents": [
+        "department--medical-anaesthesia"
+      ],
+      "parent_names": [
+        "Anaesthesia"
+      ]
+    },
+    {
+      "program_id": "program--m-d-anatomy",
+      "name": "M.D. Anatomy",
+      "url": "https://www.srmist.edu.in/program/m-d-anatomy/",
+      "parents": [
+        "department--medical-anatomy"
+      ],
+      "parent_names": [
+        "Anatomy"
+      ]
+    },
+    {
+      "program_id": "program--m-d-biochemistry",
+      "name": "M.D. Biochemistry",
+      "url": "https://www.srmist.edu.in/program/m-d-biochemistry/",
+      "parents": [
+        "department--medical-biochemistry"
+      ],
+      "parent_names": [
+        "Biochemistry"
+      ]
+    },
+    {
+      "program_id": "program--m-d-community-medicine",
+      "name": "M.D. Community Medicine",
+      "url": "https://www.srmist.edu.in/program/m-d-community-medicine/",
+      "parents": [
+        "department--medical-community-medicine"
+      ],
+      "parent_names": [
+        "Community Medicine"
+      ]
+    },
+    {
+      "program_id": "program--m-d-general-medicine",
+      "name": "M.D. General Medicine",
+      "url": "https://www.srmist.edu.in/program/m-d-general-medicine/",
+      "parents": [
+        "department--medical-general-medicine"
+      ],
+      "parent_names": [
+        "General Medicine"
+      ]
+    },
+    {
+      "program_id": "program--m-d-microbiology",
+      "name": "M.D. Microbiology",
+      "url": "https://www.srmist.edu.in/program/m-d-microbiology/",
+      "parents": [
+        "department--medical-microbiology"
+      ],
+      "parent_names": [
+        "Microbiology"
+      ]
+    },
+    {
+      "program_id": "program--m-d-paediatrics",
+      "name": "M.D. Paediatrics",
+      "url": "https://www.srmist.edu.in/program/m-d-paediatrics/",
+      "parents": [
+        "department--medical-paediatrics"
+      ],
+      "parent_names": [
+        "Paediatrics"
+      ]
+    },
+    {
+      "program_id": "program--m-d-pathology",
+      "name": "M.D. Pathology",
+      "url": "https://www.srmist.edu.in/program/m-d-pathology/",
+      "parents": [
+        "department--medical-pathology"
+      ],
+      "parent_names": [
+        "Pathology"
+      ]
+    },
+    {
+      "program_id": "program--m-d-pharmacology",
+      "name": "M.D. Pharmacology",
+      "url": "https://www.srmist.edu.in/program/m-d-pharmacology/",
+      "parents": [
+        "department--medical-pharmacology"
+      ],
+      "parent_names": [
+        "Pharmacology"
+      ]
+    },
+    {
+      "program_id": "program--m-d-physiology",
+      "name": "M.D. Physiology",
+      "url": "https://www.srmist.edu.in/program/m-d-physiology/",
+      "parents": [
+        "department--medical-physiology"
+      ],
+      "parent_names": [
+        "Physiology"
+      ]
+    },
+    {
+      "program_id": "program--m-d-psychiatry",
+      "name": "M.D. Psychiatry",
+      "url": "https://www.srmist.edu.in/program/m-d-psychiatry/",
+      "parents": [
+        "department--medical-psychiatry"
+      ],
+      "parent_names": [
+        "Psychiatry"
+      ]
+    },
+    {
+      "program_id": "program--m-d-respiratory-medicine",
+      "name": "M.D. Respiratory Medicine",
+      "url": "https://www.srmist.edu.in/program/m-d-respiratory-medicine/",
+      "parents": [
+        "department--medical-respiratory-medicine"
+      ],
+      "parent_names": [
+        "Respiratory Medicine"
+      ]
+    },
+    {
+      "program_id": "program--m-d-s-oral-pathology",
+      "name": "M.D.S. Oral Pathology",
+      "url": "https://www.srmist.edu.in/program/m-d-s-oral-pathology/",
+      "parents": [
+        "department--dental-oral-and-maxillofacial-pathology"
+      ],
+      "parent_names": [
+        "Oral and Maxillofacial Pathology"
+      ]
+    },
+    {
+      "program_id": "program--m-optm-optometry",
+      "name": "M.Optom (Optometry)",
+      "url": "https://www.srmist.edu.in/program/m-optm-optometry/",
+      "parents": [
+        "department--allied-health-optometry"
+      ],
+      "parent_names": [
+        "Optometry"
+      ]
+    },
+    {
+      "program_id": "program--m-o-t-paediatrics",
+      "name": "M.O.T Paediatrics",
+      "url": "https://www.srmist.edu.in/program/m-o-t-paediatrics/",
+      "parents": [
+        "sub_college--college-of-occupational-therapy"
+      ],
+      "parent_names": [
+        "College of Occupational Therapy"
+      ]
+    },
+    {
+      "program_id": "program--m-p-t-neurology",
+      "name": "M.P.T – Neuroscience",
+      "url": "https://www.srmist.edu.in/program/m-p-t-neurology/",
+      "parents": [
+        "sub_college--college-of-physiotherapy"
+      ],
+      "parent_names": [
+        "College of Physiotherapy"
+      ]
+    },
+    {
+      "program_id": "program--m-sc-paediatric-nursing",
+      "name": "M.Sc. Paediatric Nursing",
+      "url": "https://www.srmist.edu.in/program/m-sc-paediatric-nursing/",
+      "parents": [
+        "sub_college--college-of-nursing"
+      ],
+      "parent_names": [
+        "College of Nursing"
+      ]
+    },
+    {
+      "program_id": "program--m-sc-psychiatric-nursing",
+      "name": "M.Sc. Psychiatric Nursing",
+      "url": "https://www.srmist.edu.in/program/m-sc-psychiatric-nursing/",
+      "parents": [
+        "sub_college--college-of-nursing"
+      ],
+      "parent_names": [
+        "College of Nursing"
+      ]
+    },
+    {
+      "program_id": "program--m-s-obstetrics-and-gynaecology",
+      "name": "M.S. Obstetrics and Gynaecology",
+      "url": "https://www.srmist.edu.in/program/m-s-obstetrics-and-gynaecology/",
+      "parents": [
+        "department--medical-obstetrics-and-gynaecology"
+      ],
+      "parent_names": [
+        "Obstetrics and Gynaecology"
+      ]
+    },
+    {
+      "program_id": "program--m-s-orthopaedics",
+      "name": "M.S. Orthopaedics",
+      "url": "https://www.srmist.edu.in/program/m-s-orthopaedics/",
+      "parents": [
+        "department--medical-orthopaedics"
+      ],
+      "parent_names": [
+        "Orthopaedics"
+      ]
+    },
+    {
+      "program_id": "program--m-techintegrated-artificial-intelligence",
+      "name": "M.Tech. (Integrated) – Artificial Intelligence",
+      "url": "https://www.srmist.edu.in/program/m-techintegrated-artificial-intelligence/",
+      "parents": [
+        "department--department-of-computational-intelligence"
+      ],
+      "parent_names": [
+        "Computational Intelligence"
+      ]
+    },
+    {
+      "program_id": "program--m-tech-computer-science-and-engineering",
+      "name": "M.Tech. Computer Science and Engineering",
+      "url": "https://www.srmist.edu.in/program/m-tech-computer-science-and-engineering/",
+      "parents": [
+        "department--department-of-computer-science"
+      ],
+      "parent_names": [
+        "Computer Science"
+      ]
+    },
+    {
+      "program_id": "program--m-tech-computer-science-engineering",
+      "name": "M. Tech Computer Science and Engineering",
+      "url": "https://www.srmist.edu.in/program/m-tech-computer-science-engineering/",
+      "parents": [
+        "department--department-of-computer-science"
+      ],
+      "parent_names": [
+        "Computer Science"
+      ]
+    },
+    {
+      "program_id": "program--m-tech-integrated-mechanical-engineering",
+      "name": "M.Tech. (Integrated) – Mechanical Engineering",
+      "url": "https://www.srmist.edu.in/program/m-tech-integrated-mechanical-engineering/",
+      "parents": [
+        "department--department-of-mechanical-engineering"
+      ],
+      "parent_names": [
+        "Mechanical Engineering"
+      ]
+    },
+    {
+      "program_id": "program--m-tech-in-artificial-intelligence",
+      "name": "M.Tech. Artificial Intelligence",
+      "url": "https://www.srmist.edu.in/program/m-tech-in-artificial-intelligence/",
+      "parents": [
+        "department--department-of-computational-intelligence"
+      ],
+      "parent_names": [
+        "Computational Intelligence"
+      ]
+    },
+    {
+      "program_id": "program--pharmd-doctor-of-pharmacy",
+      "name": "Pharm.D. Doctor of Pharmacy",
+      "url": "https://www.srmist.edu.in/program/pharmd-doctor-of-pharmacy/",
+      "parents": [
+        "department--pharmacy-pharmacy-practice"
+      ],
+      "parent_names": [
+        "Pharmacy Practice"
+      ]
+    },
+    {
+      "program_id": "program--phd-aerospace-engineering",
+      "name": "PhD. Aerospace Engineering (Full Time)",
+      "url": "https://www.srmist.edu.in/program/phd-aerospace-engineering/",
+      "parents": [
+        "department--department-of-aerospace-engineering"
+      ],
+      "parent_names": [
+        "Aerospace Engineering"
+      ]
+    },
+    {
+      "program_id": "program--phd-agronomy",
+      "name": "PhD. Agronomy",
+      "url": "https://www.srmist.edu.in/program/phd-agronomy/",
+      "parents": [
+        "department--department-of-agronomy"
+      ],
+      "parent_names": [
+        "Agronomy"
+      ]
+    },
+    {
+      "program_id": "program--phd-fruit-science",
+      "name": "PhD. Fruit Science",
+      "url": "https://www.srmist.edu.in/program/phd-fruit-science/",
+      "parents": [
+        "department--department-of-fruit-science"
+      ],
+      "parent_names": [
+        "Fruit Science"
+      ]
+    },
+    {
+      "program_id": "program--phd-genetics-plant-breeding",
+      "name": "PhD. Genetics & Plant Breeding",
+      "url": "https://www.srmist.edu.in/program/phd-genetics-plant-breeding/",
+      "parents": [
+        "department--department-of-genetics-and-plant-breeding"
+      ],
+      "parent_names": [
+        "Genetics and Plant breeding"
+      ]
+    },
+    {
+      "program_id": "program--phd-in-biomedical-engineering",
+      "name": "PhD. Biomedical Engineering",
+      "url": "https://www.srmist.edu.in/program/phd-in-biomedical-engineering/",
+      "parents": [
+        "department--department-of-biomedical-engineering"
+      ],
+      "parent_names": [
+        "Biomedical Engineering"
+      ]
+    },
+    {
+      "program_id": "program--phd-in-biotechnology",
+      "name": "PhD. Biotechnology",
+      "url": "https://www.srmist.edu.in/program/phd-in-biotechnology/",
+      "parents": [
+        "department--department-of-biotechnology"
+      ],
+      "parent_names": [
+        "Biotechnology"
+      ]
+    },
+    {
+      "program_id": "program--phd-in-genetic-engineering",
+      "name": "PhD. Genetic Engineering (Full Time)",
+      "url": "https://www.srmist.edu.in/program/phd-in-genetic-engineering/",
+      "parents": [
+        "department--department-of-genetic-engineering"
+      ],
+      "parent_names": [
+        "Genetic Engineering"
+      ]
+    },
+    {
+      "program_id": "program--phd-in-management",
+      "name": "PhD. Management",
+      "url": "https://www.srmist.edu.in/program/phd-in-management/",
+      "parents": [
+        "department--department-of-management"
+      ],
+      "parent_names": [
+        "Management"
+      ]
+    },
+    {
+      "program_id": "program--phd-in-social-work",
+      "name": "PhD. Social Work",
+      "url": "https://www.srmist.edu.in/program/phd-in-social-work/",
+      "parents": [
+        "department--department-of-social-work"
+      ],
+      "parent_names": [
+        "Social Work"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-chemistry",
+      "name": "PhD. Chemistry",
+      "url": "https://www.srmist.edu.in/program/ph-d-chemistry/",
+      "parents": [
+        "department--department-of-chemistry"
+      ],
+      "parent_names": [
+        "Chemistry"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-clinical-psychology",
+      "name": "Ph.D. Clinical Psychology",
+      "url": "https://www.srmist.edu.in/program/ph-d-clinical-psychology/",
+      "parents": [
+        "department--allied-health-clinical-psychology"
+      ],
+      "parent_names": [
+        "Clinical Psychology"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-architecture-and-interior-design",
+      "name": "PhD. Architecture and Interior Design",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-architecture-and-interior-design/",
+      "parents": [
+        "department--department-of-architecture"
+      ],
+      "parent_names": [
+        "Architecture"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-automobile-engineering",
+      "name": "PhD. Automobile Engineering",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-automobile-engineering/",
+      "parents": [
+        "department--department-of-automobile-engineering"
+      ],
+      "parent_names": [
+        "Automobile Engineering"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-biochemistry",
+      "name": "PhD. Biochemistry",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-biochemistry/",
+      "parents": [
+        "department--department-of-biochemistry"
+      ],
+      "parent_names": [
+        "Biochemistry"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-chemical-engineering",
+      "name": "PhD. Chemical Engineering",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-chemical-engineering/",
+      "parents": [
+        "department--department-of-chemical-engineering"
+      ],
+      "parent_names": [
+        "Chemical Engineering"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-civil-engineeringfull-time",
+      "name": "PhD. Civil Engineering (Full Time)",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-civil-engineeringfull-time/",
+      "parents": [
+        "department--department-of-civil-engineering"
+      ],
+      "parent_names": [
+        "Civil Engineering"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-computer-applications",
+      "name": "PhD. Computer Applications",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-computer-applications/",
+      "parents": [
+        "department--department-of-computer-applications"
+      ],
+      "parent_names": [
+        "Computer Applications"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-computer-science-and-engineering",
+      "name": "PhD. Computer Science and Engineering (Full Time)",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-computer-science-and-engineering/",
+      "parents": [
+        "department--department-of-computer-science"
+      ],
+      "parent_names": [
+        "Computer Science"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-defence-and-strategic-studies",
+      "name": "Ph.D. Defence and Strategic Studies",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-defence-and-strategic-studies/",
+      "parents": [
+        "department--department-of-defence-and-strategic-studies"
+      ],
+      "parent_names": [
+        "Defence and Strategic Studies"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-economics",
+      "name": "Ph.D. Economics",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-economics/",
+      "parents": [
+        "department--department-of-economics"
+      ],
+      "parent_names": [
+        "Economics"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-electrical-electronics-engineering",
+      "name": "PhD. Electrical & Electronics Engineering",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-electrical-electronics-engineering/",
+      "parents": [
+        "department--department-of-electrical-and-electronics-engineering"
+      ],
+      "parent_names": [
+        "Electrical and Electronics Engineering"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-electronics-and-communication-engineering",
+      "name": "PhD. Electronics and Communication Engineering",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-electronics-and-communication-engineering/",
+      "parents": [
+        "department--department-of-electronics-communication"
+      ],
+      "parent_names": [
+        "Electronics & Communication"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-electronics-and-instrumentation-engineering-part-timeexternal",
+      "name": "PhD. Electronics and Instrumentation Engineering – Part Time (External)",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-electronics-and-instrumentation-engineering-part-timeexternal/",
+      "parents": [
+        "department--department-of-electronics-instrumentation"
+      ],
+      "parent_names": [
+        "Electronics & Instrumentation Engineering"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-electronics-and-instrumentation-engineering-full-time",
+      "name": "PhD. Electronics and Instrumentation Engineering (Full Time)",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-electronics-and-instrumentation-engineering-full-time/",
+      "parents": [
+        "department--department-of-electronics-instrumentation"
+      ],
+      "parent_names": [
+        "Electronics & Instrumentation Engineering"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-food-process-engineeringfull-time",
+      "name": "PhD. Food Process Engineering(Full Time)",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-food-process-engineeringfull-time/",
+      "parents": [
+        "department--department-of-food-technology"
+      ],
+      "parent_names": [
+        "Food Technology"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-mathematics",
+      "name": "PhD. Mathematics",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-mathematics/",
+      "parents": [
+        "department--department-of-mathematics-and-statistics"
+      ],
+      "parent_names": [
+        "Mathematics and Statistics"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-mechanical-engineering-full-time",
+      "name": "PhD. Mechanical Engineering (Full Time)",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-mechanical-engineering-full-time/",
+      "parents": [
+        "department--department-of-mechanical-engineering"
+      ],
+      "parent_names": [
+        "Mechanical Engineering"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-mechatronics-engineering-full-time",
+      "name": "PhD. Mechatronics Engineering (Full Time)",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-mechatronics-engineering-full-time/",
+      "parents": [
+        "department--department-of-mechatronics"
+      ],
+      "parent_names": [
+        "Mechatronics"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-nanotechnology-full-time",
+      "name": "PhD. Nanotechnology (Full Time)",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-nanotechnology-full-time/",
+      "parents": [
+        "department--department-of-physics-and-nanotechnology"
+      ],
+      "parent_names": [
+        "Physics and Nanotechnology"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-pharmacy",
+      "name": "PhD. Pharmacy",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-pharmacy/",
+      "parents": [
+        "department--pharmacy-pharmacy-research"
+      ],
+      "parent_names": [
+        "Pharmacy Research"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-physics-full-time",
+      "name": "PhD. Physics (Full Time)",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-physics-full-time/",
+      "parents": [
+        "department--department-of-physics-and-nanotechnology"
+      ],
+      "parent_names": [
+        "Physics and Nanotechnology"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-psychology",
+      "name": "PhD. Psychology",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-psychology/",
+      "parents": [
+        "department--department-of-psychology"
+      ],
+      "parent_names": [
+        "Psychology"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-tamil",
+      "name": "Ph.D. Tamil",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-tamil/",
+      "parents": [
+        "department--department-of-tamil"
+      ],
+      "parent_names": [
+        "Tamil"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-in-yoga",
+      "name": "Ph.D. Yoga",
+      "url": "https://www.srmist.edu.in/program/ph-d-in-yoga/",
+      "parents": [
+        "department--department-of-yoga"
+      ],
+      "parent_names": [
+        "Yoga"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-journalism-and-mass-communication",
+      "name": "Ph.D. Journalism and Mass Communication",
+      "url": "https://www.srmist.edu.in/program/ph-d-journalism-and-mass-communication/",
+      "parents": [
+        "department--department-of-journalism-and-mass-communication"
+      ],
+      "parent_names": [
+        "Journalism And Mass Communication"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-language-linguistics-and-literature",
+      "name": "PhD. Language, Linguistics and Literature – Full Time",
+      "url": "https://www.srmist.edu.in/program/ph-d-language-linguistics-and-literature/",
+      "parents": [
+        "department--department-of-language-culture-and-society"
+      ],
+      "parent_names": [
+        "Language, Culture and Society"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-occupational-therapy",
+      "name": "Ph.D. Occupational Therapy",
+      "url": "https://www.srmist.edu.in/program/ph-d-occupational-therapy/",
+      "parents": [
+        "sub_college--college-of-occupational-therapy"
+      ],
+      "parent_names": [
+        "College of Occupational Therapy"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-optometry",
+      "name": "Ph.D. Optometry",
+      "url": "https://www.srmist.edu.in/program/ph-d-optometry/",
+      "parents": [
+        "department--allied-health-optometry"
+      ],
+      "parent_names": [
+        "Optometry"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-physiotherapy",
+      "name": "Ph.D. Physiotherapy",
+      "url": "https://www.srmist.edu.in/program/ph-d-physiotherapy/",
+      "parents": [
+        "sub_college--college-of-physiotherapy"
+      ],
+      "parent_names": [
+        "College of Physiotherapy"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-public-health",
+      "name": "PhD. Public Health",
+      "url": "https://www.srmist.edu.in/program/ph-d-public-health/",
+      "parents": [
+        "sub_college--school-of-public-health"
+      ],
+      "parent_names": [
+        "School of Public Health"
+      ]
+    },
+    {
+      "program_id": "program--ph-d-visual-communication",
+      "name": "Ph.D. Visual Communication",
+      "url": "https://www.srmist.edu.in/program/ph-d-visual-communication/",
+      "parents": [
+        "department--department-of-visual-communication"
+      ],
+      "parent_names": [
+        "Visual Communication"
+      ]
+    },
+    {
+      "program_id": "program--regular-phd",
+      "name": "PhD. Biotechnology",
+      "url": "https://www.srmist.edu.in/program/regular-phd/",
+      "parents": [
+        "department--department-of-biotechnology"
+      ],
+      "parent_names": [
+        "Biotechnology"
+      ]
+    },
+    {
+      "program_id": "program--robotics",
+      "name": "Minor Degree in Robotics",
+      "url": "https://www.srmist.edu.in/program/robotics/",
+      "parents": [
+        "department--department-of-mechatronics"
+      ],
+      "parent_names": [
+        "Mechatronics"
+      ]
+    },
+    {
+      "program_id": "program--semiconductor-process-engineering",
+      "name": "Minor Degree in Semiconductor Process Engineering",
+      "url": "https://www.srmist.edu.in/program/semiconductor-process-engineering/",
+      "parents": [
+        "department--department-of-mechatronics"
+      ],
+      "parent_names": [
+        "Mechatronics"
+      ]
+    },
+    {
+      "program_id": "program--semiconductor-technology",
+      "name": "Minor Degree in Semiconductor Technology",
+      "url": "https://www.srmist.edu.in/program/semiconductor-technology/",
+      "parents": [
+        "department--department-of-physics-and-nanotechnology"
+      ],
+      "parent_names": [
+        "Physics and Nanotechnology"
+      ]
+    },
+    {
+      "program_id": "program--space-technology",
+      "name": "Minor Degree in Space Technology",
+      "url": "https://www.srmist.edu.in/program/space-technology/",
+      "parents": [
+        "department--department-of-aerospace-engineering"
+      ],
+      "parent_names": [
+        "Aerospace Engineering"
+      ]
+    }
+  ],
+  "3_centre_parent_mismatch": [
+    {
+      "centre_id": "centre--srm-dbt-platform",
+      "centre_name": "SRM-DBT Platform",
+      "centre_url": "https://www.srmist.edu.in/lab/srm-dbt-platform/",
+      "current_parent": "college--faculty-of-engineering-and-technology",
+      "current_parent_name": "Faculty of Engineering & Technology",
+      "observed_parents": [
+        "department--department-of-biotechnology"
+      ],
+      "observed_parent_names": [
+        "Biotechnology"
+      ]
+    },
+    {
+      "centre_id": "centre--accelerated-computing",
+      "centre_name": "Accelerated Computing",
+      "centre_url": "https://www.srmist.edu.in/lab/accelerated-computing/",
+      "current_parent": "department--department-of-computational-intelligence",
+      "current_parent_name": "Computational Intelligence",
+      "observed_parents": [
+        "department--department-of-computing-technologies"
+      ],
+      "observed_parent_names": [
+        "Computing Technologies"
+      ]
+    },
+    {
+      "centre_id": "centre--advance-multilingual-computing",
+      "centre_name": "Advance Multilingual Computing",
+      "centre_url": "https://www.srmist.edu.in/lab/advance-multilingual-computing/",
+      "current_parent": "department--department-of-computational-intelligence",
+      "current_parent_name": "Computational Intelligence",
+      "observed_parents": [
+        "department--department-of-computing-technologies"
+      ],
+      "observed_parent_names": [
+        "Computing Technologies"
+      ]
+    },
+    {
+      "centre_id": "centre--center-for-acces",
+      "centre_name": "CENTER FOR ACCES",
+      "centre_url": "https://www.srmist.edu.in/lab/center-for-acces/",
+      "current_parent": "sub_college--college-of-occupational-therapy",
+      "current_parent_name": "College of Occupational Therapy",
+      "observed_parents": [
+        "department--department-of-electronics-instrumentation"
+      ],
+      "observed_parent_names": [
+        "Electronics & Instrumentation Engineering"
+      ]
+    },
+    {
+      "centre_id": "centre--clinical-departments",
+      "centre_name": "Clinical Departments",
+      "centre_url": "https://www.srmist.edu.in/lab/clinical-departments/",
+      "current_parent": "sub_college--college-of-medicine",
+      "current_parent_name": "SRM Medical College Hospital and Research Centre (SRM MCHRC)",
+      "observed_parents": [
+        "sub_college--college-of-occupational-therapy"
+      ],
+      "observed_parent_names": [
+        "College of Occupational Therapy"
+      ]
+    },
+    {
+      "centre_id": "centre--control-energy-testing-lab",
+      "centre_name": "Control, Energy & Testing Lab",
+      "centre_url": "https://www.srmist.edu.in/lab/control-energy-testing-lab/",
+      "current_parent": "department--department-of-electronics-instrumentation",
+      "current_parent_name": "Electronics & Instrumentation Engineering",
+      "observed_parents": [
+        "department--department-of-electrical-and-electronics-engineering"
+      ],
+      "observed_parent_names": [
+        "Electrical and Electronics Engineering"
+      ]
+    },
+    {
+      "centre_id": "centre--edge-intelligence-lab",
+      "centre_name": "Edge Intelligence Lab",
+      "centre_url": "https://www.srmist.edu.in/lab/edge-intelligence-lab/",
+      "current_parent": "department--department-of-computational-intelligence",
+      "current_parent_name": "Computational Intelligence",
+      "observed_parents": [
+        "department--department-of-networking-and-communications"
+      ],
+      "observed_parent_names": [
+        "Networking And Communications"
+      ]
+    },
+    {
+      "centre_id": "centre--embedded-ai-lab-associated-with-nvidia-gtc",
+      "centre_name": "Embedded AI Lab Associated with Nvidia GTC",
+      "centre_url": "https://www.srmist.edu.in/lab/embedded-ai-lab-associated-with-nvidia-gtc/",
+      "current_parent": "department--department-of-electronics-communication",
+      "current_parent_name": "Electronics & Communication",
+      "observed_parents": [
+        "department--department-of-networking-and-communications"
+      ],
+      "observed_parent_names": [
+        "Networking And Communications"
+      ]
+    },
+    {
+      "centre_id": "centre--facilities-for-differently-abled-divyangjan-barrier-free-environment",
+      "centre_name": "Facilities for Differently-Abled (Divyangjan): Barrier-Free Environment",
+      "centre_url": "https://www.srmist.edu.in/lab/facilities-for-differently-abled-divyangjan-barrier-free-environment/",
+      "current_parent": "sub_college--college-of-occupational-therapy",
+      "current_parent_name": "College of Occupational Therapy",
+      "observed_parents": [
+        "sub_college--college-of-pharmacy"
+      ],
+      "observed_parent_names": [
+        "College of Pharmacy"
+      ]
+    },
+    {
+      "centre_id": "centre--green-computing",
+      "centre_name": "Green Computing",
+      "centre_url": "https://www.srmist.edu.in/lab/green-computing/",
+      "current_parent": "department--department-of-data-science-and-business-systems",
+      "current_parent_name": "Data Science And Business Systems",
+      "observed_parents": [
+        "department--department-of-computing-technologies"
+      ],
+      "observed_parent_names": [
+        "Computing Technologies"
+      ]
+    },
+    {
+      "centre_id": "centre--hand-rehabilitation-lab-2",
+      "centre_name": "Hand Rehabilitation Lab",
+      "centre_url": "https://www.srmist.edu.in/lab/hand-rehabilitation-lab-2/",
+      "current_parent": "sub_college--college-of-occupational-therapy",
+      "current_parent_name": "College of Occupational Therapy",
+      "observed_parents": [
+        "sub_college--college-of-physiotherapy"
+      ],
+      "observed_parent_names": [
+        "College of Physiotherapy"
+      ]
+    },
+    {
+      "centre_id": "centre--hand-rehabilitation-lab",
+      "centre_name": "Hand Rehabilitation Lab",
+      "centre_url": "https://www.srmist.edu.in/lab/hand-rehabilitation-lab/",
+      "current_parent": "college--faculty-of-management",
+      "current_parent_name": "Faculty of Management",
+      "observed_parents": [
+        "sub_college--college-of-occupational-therapy"
+      ],
+      "observed_parent_names": [
+        "College of Occupational Therapy"
+      ]
+    },
+    {
+      "centre_id": "centre--neurology-lab",
+      "centre_name": "Neurology Lab",
+      "centre_url": "https://www.srmist.edu.in/lab/neurology-lab/",
+      "current_parent": "sub_college--college-of-physiotherapy",
+      "current_parent_name": "College of Physiotherapy",
+      "observed_parents": [
+        "sub_college--college-of-occupational-therapy"
+      ],
+      "observed_parent_names": [
+        "College of Occupational Therapy"
+      ]
+    },
+    {
+      "centre_id": "centre--neuro-rehabilitation-lab",
+      "centre_name": "Neuro Rehabilitation Lab",
+      "centre_url": "https://www.srmist.edu.in/lab/neuro-rehabilitation-lab/",
+      "current_parent": "sub_college--college-of-occupational-therapy",
+      "current_parent_name": "College of Occupational Therapy",
+      "observed_parents": [
+        "sub_college--college-of-physiotherapy"
+      ],
+      "observed_parent_names": [
+        "College of Physiotherapy"
+      ]
+    },
+    {
+      "centre_id": "centre--nutrition-lab",
+      "centre_name": "Nutrition Lab",
+      "centre_url": "https://www.srmist.edu.in/lab/nutrition-lab/",
+      "current_parent": "department--allied-health-clinical-nutrition-and-dietetics",
+      "current_parent_name": "Clinical Nutrition and Dietetics",
+      "observed_parents": [
+        "sub_college--college-of-nursing"
+      ],
+      "observed_parent_names": [
+        "College of Nursing"
+      ]
+    },
+    {
+      "centre_id": "centre--obstetrics-and-gynecology-lab",
+      "centre_name": "Obstetrics and Gynecology Lab",
+      "centre_url": "https://www.srmist.edu.in/lab/obstetrics-and-gynecology-lab/",
+      "current_parent": "sub_college--college-of-nursing",
+      "current_parent_name": "College of Nursing",
+      "observed_parents": [
+        "sub_college--college-of-physiotherapy"
+      ],
+      "observed_parent_names": [
+        "College of Physiotherapy"
+      ]
+    },
+    {
+      "centre_id": "centre--orthopaedic-lab",
+      "centre_name": "Orthopaedic Lab",
+      "centre_url": "https://www.srmist.edu.in/lab/orthopaedic-lab/",
+      "current_parent": "sub_college--college-of-physiotherapy",
+      "current_parent_name": "College of Physiotherapy",
+      "observed_parents": [
+        "sub_college--college-of-occupational-therapy"
+      ],
+      "observed_parent_names": [
+        "College of Occupational Therapy"
+      ]
+    },
+    {
+      "centre_id": "centre--post-graduate-research-lab",
+      "centre_name": "Post Graduate Research Lab",
+      "centre_url": "https://www.srmist.edu.in/lab/post-graduate-research-lab/",
+      "current_parent": "directorate--directorate-of-research",
+      "current_parent_name": "Directorate of Research",
+      "observed_parents": [
+        "sub_college--college-of-physiotherapy"
+      ],
+      "observed_parent_names": [
+        "College of Physiotherapy"
+      ]
+    },
+    {
+      "centre_id": "centre--quantum-computing",
+      "centre_name": "Quantum Computing",
+      "centre_url": "https://www.srmist.edu.in/lab/quantum-computing/",
+      "current_parent": "department--department-of-computational-intelligence",
+      "current_parent_name": "Computational Intelligence",
+      "observed_parents": [
+        "department--department-of-computing-technologies"
+      ],
+      "observed_parent_names": [
+        "Computing Technologies"
+      ]
+    },
+    {
+      "centre_id": "centre--spdc",
+      "centre_name": "Skill And Personality Development Program Centre",
+      "centre_url": "https://www.srmist.edu.in/lab/spdc/",
+      "current_parent": "directorate--directorate-of-learning-and-development",
+      "current_parent_name": "Directorate of Learning and Development",
+      "observed_parents": [
+        "department--department-of-electrical-and-electronics-engineering"
+      ],
+      "observed_parent_names": [
+        "Electrical and Electronics Engineering"
+      ]
+    },
+    {
+      "centre_id": "centre--theoretical-computer-science",
+      "centre_name": "Theoretical Computer Science",
+      "centre_url": "https://www.srmist.edu.in/lab/theoretical-computer-science/",
+      "current_parent": "department--department-of-computational-intelligence",
+      "current_parent_name": "Computational Intelligence",
+      "observed_parents": [
+        "department--department-of-computing-technologies"
+      ],
+      "observed_parent_names": [
+        "Computing Technologies"
+      ]
+    },
+    {
+      "centre_id": "centre--visual-computing",
+      "centre_name": "Visual Computing",
+      "centre_url": "https://www.srmist.edu.in/lab/visual-computing/",
+      "current_parent": "department--department-of-computational-intelligence",
+      "current_parent_name": "Computational Intelligence",
+      "observed_parents": [
+        "department--department-of-computing-technologies"
+      ],
+      "observed_parent_names": [
+        "Computing Technologies"
+      ]
+    },
+    {
+      "centre_id": "centre--wireless-charging-research-center",
+      "centre_name": "Wireless Charging Research Center",
+      "centre_url": "https://www.srmist.edu.in/lab/wireless-charging-research-center/",
+      "current_parent": "department--department-of-electronics-communication",
+      "current_parent_name": "Electronics & Communication",
+      "observed_parents": [
+        "department--department-of-electrical-and-electronics-engineering"
+      ],
+      "observed_parent_names": [
+        "Electrical and Electronics Engineering"
+      ]
+    }
+  ],
+  "4_suspected_non_centres": [
+    {
+      "centre_id": "centre--reach",
+      "name": "REACH",
+      "url": "https://www.srmist.edu.in/research/research-wings/reach/",
+      "suggested_type": "misc",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--scif",
+      "name": "SCIF",
+      "url": "https://www.srmist.edu.in/research/scif/",
+      "suggested_type": "misc",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--extension-activities-and-outreach-programs",
+      "name": "Extension Activities and Outreach Programs",
+      "url": "https://www.srmist.edu.in/department/college-of-nursing/extension-activities-and-outreach-programs/",
+      "suggested_type": "misc",
+      "reason": "non-centre token in name"
+    },
+    {
+      "centre_id": "centre--extension-activities-and-community-outreach-programs",
+      "name": "Extension Activities and Community Outreach Programs",
+      "url": "https://www.srmist.edu.in/department/college-of-occupational-therapy/extension-activities-and-community-outreach-programs/",
+      "suggested_type": "misc",
+      "reason": "non-centre token in name"
+    },
+    {
+      "centre_id": "centre--accelerated-computing",
+      "name": "Accelerated Computing",
+      "url": "https://www.srmist.edu.in/lab/accelerated-computing/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--advance-multilingual-computing",
+      "name": "Advance Multilingual Computing",
+      "url": "https://www.srmist.edu.in/lab/advance-multilingual-computing/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--aerospace-hangar",
+      "name": "Aerospace Hangar",
+      "url": "https://www.srmist.edu.in/lab/aerospace-hangar/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--agricultural-microbiology-and-environmental-science",
+      "name": "Agricultural Microbiology and Environmental Science",
+      "url": "https://www.srmist.edu.in/lab/agricultural-microbiology-and-environmental-science/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--carpentry-shop",
+      "name": "Carpentry Shop",
+      "url": "https://www.srmist.edu.in/lab/carpentry-shop/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--chemistry-research-facilities",
+      "name": "Chemistry Research Facilities",
+      "url": "https://www.srmist.edu.in/lab/chemistry-research-facilities/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--clinical-departments",
+      "name": "Clinical Departments",
+      "url": "https://www.srmist.edu.in/lab/clinical-departments/",
+      "suggested_type": "misc",
+      "reason": "non-centre token in name"
+    },
+    {
+      "centre_id": "centre--construction-yard",
+      "name": "Construction yard",
+      "url": "https://www.srmist.edu.in/lab/construction-yard/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--data-mining",
+      "name": "Data Mining",
+      "url": "https://www.srmist.edu.in/lab/data-mining/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--display-hall",
+      "name": "Display Hall",
+      "url": "https://www.srmist.edu.in/lab/display-hall/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--dst-fist",
+      "name": "DST-FIST",
+      "url": "https://www.srmist.edu.in/lab/dst-fist/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--edit-suite",
+      "name": "Edit Suite",
+      "url": "https://www.srmist.edu.in/lab/edit-suite/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--electronics-manufacturing-services",
+      "name": "Electronics Manufacturing Services",
+      "url": "https://www.srmist.edu.in/lab/electronics-manufacturing-services/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--electronic-design-automation",
+      "name": "Electronic Design Automation",
+      "url": "https://www.srmist.edu.in/lab/electronic-design-automation/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--facilities-for-differently-abled-divyangjan-barrier-free-environment",
+      "name": "Facilities for Differently-Abled (Divyangjan): Barrier-Free Environment",
+      "url": "https://www.srmist.edu.in/lab/facilities-for-differently-abled-divyangjan-barrier-free-environment/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--fitting-shop",
+      "name": "Fitting Shop",
+      "url": "https://www.srmist.edu.in/lab/fitting-shop/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--functional-materials-and-energy-devices-research",
+      "name": "Functional Materials and Energy Devices Research",
+      "url": "https://www.srmist.edu.in/lab/functional-materials-and-energy-devices-research/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--green-computing",
+      "name": "Green Computing",
+      "url": "https://www.srmist.edu.in/lab/green-computing/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--instruments",
+      "name": "Instruments",
+      "url": "https://www.srmist.edu.in/lab/instruments/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--machine-shop",
+      "name": "Machine Shop",
+      "url": "https://www.srmist.edu.in/lab/machine-shop/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--operating-system",
+      "name": "Operating System",
+      "url": "https://www.srmist.edu.in/lab/operating-system/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--pharmaceutical-chemistry",
+      "name": "Pharmaceutical Chemistry",
+      "url": "https://www.srmist.edu.in/lab/pharmaceutical-chemistry/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--pharmaceutics",
+      "name": "Pharmaceutics",
+      "url": "https://www.srmist.edu.in/lab/pharmaceutics/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--pharmacognosy",
+      "name": "Pharmacognosy",
+      "url": "https://www.srmist.edu.in/lab/pharmacognosy/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--quantum-computing",
+      "name": "Quantum Computing",
+      "url": "https://www.srmist.edu.in/lab/quantum-computing/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--recording-theatre",
+      "name": "Recording Theatre",
+      "url": "https://www.srmist.edu.in/lab/recording-theatre/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--research-and-development",
+      "name": "Research and Development",
+      "url": "https://www.srmist.edu.in/lab/research-and-development/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--sheet-metal-shop",
+      "name": "Sheet Metal Shop",
+      "url": "https://www.srmist.edu.in/lab/sheet-metal-shop/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--smithy-shop",
+      "name": "Smithy Shop",
+      "url": "https://www.srmist.edu.in/lab/smithy-shop/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--soil-science-and-agricultural-chemistry",
+      "name": "Soil Science and Agricultural Chemistry",
+      "url": "https://www.srmist.edu.in/lab/soil-science-and-agricultural-chemistry/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--srm-brin",
+      "name": "SRM-BRIN",
+      "url": "https://www.srmist.edu.in/lab/srm-brin/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--theoretical-computer-science",
+      "name": "Theoretical Computer Science",
+      "url": "https://www.srmist.edu.in/lab/theoretical-computer-science/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--transgenic-green-house-built-as-per-the-specifications-of-the-dbt-govt-of-india",
+      "name": "Transgenic Green House (built as per the specifications of the DBT, Govt of India)",
+      "url": "https://www.srmist.edu.in/lab/transgenic-green-house-built-as-per-the-specifications-of-the-dbt-govt-of-india/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--transgenic-green-house",
+      "name": "Transgenic Green House",
+      "url": "https://www.srmist.edu.in/lab/transgenic-green-house/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--visual-computing",
+      "name": "Visual Computing",
+      "url": "https://www.srmist.edu.in/lab/visual-computing/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    },
+    {
+      "centre_id": "centre--welding-shop",
+      "name": "Welding Shop",
+      "url": "https://www.srmist.edu.in/lab/welding-shop/",
+      "suggested_type": "facility",
+      "reason": "no centre/lab/facility token in name"
+    }
+  ],
+  "5_dead_pages": []
+}

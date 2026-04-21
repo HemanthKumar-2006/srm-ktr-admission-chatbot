@@ -1,4 +1,4 @@
-"""
+﻿"""
 SRM RAG Pipeline v4.1
 - All v3.1 features retained (Qdrant, hybrid search, metadata enrichment)
 - v4.0: Lightweight Knowledge Graph for entity-relationship queries
@@ -35,6 +35,7 @@ from sentence_transformers import CrossEncoder, SentenceTransformer
 import numpy as np
 
 from backend.admission_profiles import (
+    answer_admission_question,
     extract_admission_context,
     load_admission_profiles,
     save_admission_profiles,
@@ -378,6 +379,11 @@ _ROLE_QUERY_SIGNAL = re.compile(
 _ROLE_QUERY_HINTS = (
     "head of department HOD chairperson faculty profile contact email phone department office"
 )
+_LEVEL_SPECIFIC_RE = re.compile(
+    r"\b(phd|ph\.d|doctorate|doctoral|postgraduate|post.graduate|pg\b|"
+    r"master|mtech|mba|msc|mca|undergraduate|ug\b|btech|b\.tech|bachelor)\b",
+    re.I,
+)
 
 
 def classify_query_type(question: str) -> str:
@@ -505,6 +511,17 @@ def filter_chunks_for_intent(
             return (parent_match, type_match, score)
 
         filtered = sorted(filtered, key=apply_role_priority, reverse=True)
+
+    # Ensure program-level diversity for listing/general queries.
+    # When no specific level is requested, cap PhD chunks at 30% so UG/PG programs
+    # are fairly represented instead of PhD-heavy chunks dominating.
+    is_listing = intent.get("query_type") == "listing"
+    if is_listing and not _LEVEL_SPECIFIC_RE.search(question):
+        phd_chunks = [c for c in filtered if c[1].get("program_level", "").lower() == "phd"]
+        non_phd_chunks = [c for c in filtered if c[1].get("program_level", "").lower() != "phd"]
+        max_phd = max(1, len(filtered) // 3)
+        if len(phd_chunks) > max_phd:
+            filtered = non_phd_chunks + phd_chunks[:max_phd]
 
     return filtered or chunks
 
@@ -1324,11 +1341,16 @@ _FALLBACK_RE = re.compile(
     re.I | re.DOTALL,
 )
 
+_SPECIAL_TOKEN_RE = re.compile(r"<unused\d+>", re.I)
+
 
 def clean_answer_text(answer: str) -> str:
     cleaned = (answer or "").strip()
     if not cleaned:
         return cleaned
+
+    # Strip Gemma tokenizer artifacts that can leak into generated text
+    cleaned = _SPECIAL_TOKEN_RE.sub("", cleaned).strip()
 
     cleaned = _SOURCE_TAIL_RE.sub("", cleaned).strip()
     cleaned = re.sub(
@@ -1667,7 +1689,7 @@ def query_rag(
         return {
             "answer": (
                 "Hello! I'm the SRMIST Assistant. "
-                “Ask me anything about SRM — admissions, fees, courses, departments, events, campus life, placements, research, and more!”
+                "Ask me anything about SRM - admissions, fees, courses, departments, events, campus life, placements, research, and more!"
             ),
             "sources": [],
             "intent": "greeting",
@@ -1704,6 +1726,38 @@ def query_rag(
 
     kg_grounding = ""
     freshness = ""
+
+    if is_admission_query:
+        admission_profiles = get_admission_profiles()
+        if kg and admission_profiles:
+            deterministic_answer = answer_admission_question(
+                processed_question,
+                campus=resolved_campus,
+                kg=kg,
+                profiles=admission_profiles,
+            )
+            if deterministic_answer and deterministic_answer.get("answer"):
+                freshness = deterministic_answer.get("freshness", "") or ""
+                metadata = route.to_metadata(freshness=freshness or None)
+                resolution = deterministic_answer.get("admission_resolution") or {}
+                if resolution:
+                    metadata.update({
+                        "admission_route_family": resolution.get("route_family"),
+                        "admission_exam_name": resolution.get("exam_name"),
+                        "admission_application_url": resolution.get("application_url"),
+                        "admission_verification_status": resolution.get("verification_status"),
+                        "admission_override_used": bool(resolution.get("override_used")),
+                    })
+                log.info("Returning deterministic admission answer before retrieval.")
+                return {
+                    "answer": deterministic_answer["answer"],
+                    "sources": deterministic_answer.get("sources", []),
+                    "intent": deterministic_answer.get("intent", "admission_query"),
+                    "campus": deterministic_answer.get("campus") or resolved_campus,
+                    "program": deterministic_answer.get("program") or route.entities.get("program"),
+                    "confidence": metadata.get("confidence"),
+                    "query_metadata": metadata,
+                }
 
     if kg:
         if route.routing_target == "kg_listing" or query_type == "listing":
@@ -1803,7 +1857,7 @@ def query_rag(
     try:
         answer = clean_answer_text(call_llm(prompt))
     except LLMError as e:
-        log.error(f"LLM failed for query: {question!r} â€” {e}")
+        log.error(f"LLM failed for query: {question!r} - {e}")
         metadata = route.to_metadata(freshness=freshness or None)
         return {
             "answer": _FALLBACK_LLM_ERROR,

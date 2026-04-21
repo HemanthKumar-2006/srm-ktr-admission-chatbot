@@ -48,6 +48,11 @@ class QueryMetadata(BaseModel):
     freshness: str | None = Field(default=None, description="Freshness summary from evidence timestamps")
     used_pinned_context: bool = Field(default=False, description="Whether a pinned context shaped the routing")
     decomposed: bool = Field(default=False, description="Whether the query was decomposed into subtasks")
+    admission_route_family: str | None = Field(default=None, description="Resolved normalized admission route family")
+    admission_exam_name: str | None = Field(default=None, description="Resolved admission exam label")
+    admission_application_url: str | None = Field(default=None, description="Resolved application URL for deterministic admission answers")
+    admission_verification_status: str | None = Field(default=None, description="Whether the admission route came from verified source data, heuristic inference, or override")
+    admission_override_used: bool = Field(default=False, description="Whether a curated admission override was used")
 
 
 class ChatResponse(BaseModel):

@@ -32,3 +32,9 @@ Thumbs.db
 
 # Ollama
 *.gguf
+
+# Local editor metadata
+.cursor/
+
+# Claude Code worktrees and session data
+.claude/

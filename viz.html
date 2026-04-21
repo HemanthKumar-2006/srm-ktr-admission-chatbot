@@ -40,8 +40,10 @@
       min-width: 200px;
     }
     #legend h4 { margin-bottom: 8px; font-size: 13px; color: #94a3b8; letter-spacing: 0.05em; text-transform: uppercase; }
-    .legend-item { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
-    .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.3); }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin: 4px 0; cursor: pointer; transition: opacity 0.2s, filter 0.2s; }
+    .legend-item:hover { filter: brightness(1.2); }
+    .legend-item.disabled { opacity: 0.4; text-decoration: line-through; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.3); transition: background 0.2s; }
     
     #info-panel {
       position: absolute;
@@ -138,19 +140,19 @@
 
 <div id="legend">
   <h4>Entity Types</h4>
-  <div class="legend-item"><div class="legend-dot" style="background:#c084fc;border-color:#7e22ce"></div> University</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#fb923c;border-color:#c2410c"></div> Campus</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#f87171;border-color:#b91c1c"></div> College / Faculty</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#fca5a5;border-color:#dc2626"></div> School</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#f9a8d4;border-color:#be185d"></div> Sub-College</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#86efac;border-color:#15803d"></div> Department</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#67e8f9;border-color:#0e7490"></div> Centre</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#fde68a;border-color:#b45309"></div> Directorate</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#fef08a;border-color:#a16207"></div> Program</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#a7f3d0;border-color:#047857"></div> Facility</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#bfdbfe;border-color:#1d4ed8"></div> Admission</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#e9d5ff;border-color:#6b21a8"></div> Publication</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#e5e7eb;border-color:#6b7280"></div> Misc</div>
+  <div class="legend-item" data-type="university"><div class="legend-dot" style="background:#c084fc;border-color:#7e22ce"></div> University</div>
+  <div class="legend-item" data-type="campus"><div class="legend-dot" style="background:#fb923c;border-color:#c2410c"></div> Campus</div>
+  <div class="legend-item" data-type="college"><div class="legend-dot" style="background:#f87171;border-color:#b91c1c"></div> College / Faculty</div>
+  <div class="legend-item" data-type="school"><div class="legend-dot" style="background:#fca5a5;border-color:#dc2626"></div> School</div>
+  <div class="legend-item" data-type="sub_college"><div class="legend-dot" style="background:#f9a8d4;border-color:#be185d"></div> Sub-College</div>
+  <div class="legend-item" data-type="department"><div class="legend-dot" style="background:#86efac;border-color:#15803d"></div> Department</div>
+  <div class="legend-item" data-type="centre"><div class="legend-dot" style="background:#67e8f9;border-color:#0e7490"></div> Centre</div>
+  <div class="legend-item" data-type="directorate"><div class="legend-dot" style="background:#fde68a;border-color:#b45309"></div> Directorate</div>
+  <div class="legend-item" data-type="program"><div class="legend-dot" style="background:#fef08a;border-color:#a16207"></div> Program</div>
+  <div class="legend-item" data-type="facility"><div class="legend-dot" style="background:#a7f3d0;border-color:#047857"></div> Facility</div>
+  <div class="legend-item" data-type="admission"><div class="legend-dot" style="background:#bfdbfe;border-color:#1d4ed8"></div> Admission</div>
+  <div class="legend-item" data-type="publication"><div class="legend-dot" style="background:#e9d5ff;border-color:#6b21a8"></div> Publication</div>
+  <div class="legend-item" data-type="misc"><div class="legend-dot" style="background:#e5e7eb;border-color:#6b7280"></div> Misc</div>
 </div>
 
 <script type="text/javascript" src="vector_db_qdrant/knowledge_graph.js"></script>
@@ -206,6 +208,7 @@
       attributes: ent.attributes || {},
       
       // Collapsibility rules
+      _baseHidden: !(initiallyVisibleTypes.has(ent.entity_type) || !connectedNodeIds.has(ent.id)),
       hidden: !(initiallyVisibleTypes.has(ent.entity_type) || !connectedNodeIds.has(ent.id)),
       _isExpanded: false,
       _revealedTypes: []
@@ -213,11 +216,11 @@
 
     const nodes = new vis.DataSet(initialNodes);
     const initiallyHiddenById = {};
-    initialNodes.forEach(n => { initiallyHiddenById[n.id] = !!n.hidden; });
+    initialNodes.forEach(n => { initiallyHiddenById[n.id] = !!n._baseHidden; });
     const initialNodeStateById = {};
     initialNodes.forEach(n => {
       initialNodeStateById[n.id] = {
-        hidden: !!n.hidden,
+        _baseHidden: !!n._baseHidden,
         isExpanded: false,
         revealedTypes: []
       };
@@ -231,6 +234,7 @@
         label: rel.relation_type.replace(/_/g, ' '),
         arrows: 'to',
         // Start edges hidden if either endpoint is hidden.
+        _baseHidden: !!(initiallyHiddenById[rel.source_id] || initiallyHiddenById[rel.target_id]),
         hidden: !!(initiallyHiddenById[rel.source_id] || initiallyHiddenById[rel.target_id])
       }))
     );
@@ -281,6 +285,46 @@
       }
     };
 
+    // Toggle-based filtering system logic
+    const disabledTypes = new Set();
+
+    function applyVisibility() {
+      const nodeUpdates = [];
+      nodes.forEach(node => {
+        const shouldBeHidden = node._baseHidden || disabledTypes.has(node.entity_type);
+        if (node.hidden !== shouldBeHidden) {
+          nodeUpdates.push({ id: node.id, hidden: shouldBeHidden });
+        }
+      });
+      if (nodeUpdates.length > 0) nodes.update(nodeUpdates);
+
+      const edgeUpdates = [];
+      edges.forEach(edge => {
+        const fromNode = nodes.get(edge.from);
+        const toNode = nodes.get(edge.to);
+        const shouldBeHidden = edge._baseHidden || (fromNode && fromNode.hidden) || (toNode && toNode.hidden);
+        if (edge.hidden !== shouldBeHidden) {
+          edgeUpdates.push({ id: edge.id, hidden: shouldBeHidden });
+        }
+      });
+      if (edgeUpdates.length > 0) edges.update(edgeUpdates);
+    }
+
+    document.querySelectorAll('.legend-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const type = el.getAttribute('data-type');
+        if (!type) return;
+        if (disabledTypes.has(type)) {
+          disabledTypes.delete(type);
+          el.classList.remove('disabled');
+        } else {
+          disabledTypes.add(type);
+          el.classList.add('disabled');
+        }
+        applyVisibility();
+      });
+    });
+
     const container = document.getElementById('mynetwork');
     const network   = new vis.Network(container, { nodes, edges }, options);
     const viewAllToggle = document.getElementById('view-all-toggle');
@@ -300,14 +344,15 @@
         nodes.forEach((node) => {
           nodes.update({
             id: node.id,
-            hidden: false,
+            _baseHidden: false,
             _isExpanded: true,
             _revealedTypes: []
           });
         });
         edges.forEach((edge) => {
-          edges.update({ id: edge.id, hidden: false });
+          edges.update({ id: edge.id, _baseHidden: false });
         });
+        applyVisibility();
         return;
       }
 
@@ -316,7 +361,7 @@
         if (!initial) return;
         nodes.update({
           id: node.id,
-          hidden: initial.hidden,
+          _baseHidden: initial._baseHidden,
           _isExpanded: initial.isExpanded,
           _revealedTypes: initial.revealedTypes
         });
@@ -325,8 +370,9 @@
       edges.forEach((edge) => {
         const fromHidden = !!initiallyHiddenById[edge.from];
         const toHidden = !!initiallyHiddenById[edge.to];
-        edges.update({ id: edge.id, hidden: fromHidden || toHidden });
+        edges.update({ id: edge.id, _baseHidden: fromHidden || toHidden });
       });
+      applyVisibility();
     }
 
     viewAllToggle.addEventListener('click', () => {
@@ -436,13 +482,13 @@
 
         if (nextGroup) {
           // Reveal one child-type group per double-click.
-          const nodeUpdates = nextGroup.childIds.map(childId => ({ id: childId, hidden: false }));
+          const nodeUpdates = nextGroup.childIds.map(childId => ({ id: childId, _baseHidden: false }));
           nodes.update(nodeUpdates);
 
           const edgeUpdates = [];
           edges.forEach(e => {
             if (e.from === nodeId && nextGroup.childIds.includes(e.to)) {
-              edgeUpdates.push({ id: e.id, hidden: false });
+              edgeUpdates.push({ id: e.id, _baseHidden: false });
             }
           });
           edges.update(edgeUpdates);
@@ -452,6 +498,7 @@
             _isExpanded: true,
             _revealedTypes: [...revealedTypes, nextGroup.type]
           });
+          applyVisibility();
           return;
         }
 
@@ -459,7 +506,7 @@
         const descendants = getDescendants(nodeId);
         const hideUpdates = descendants.map(descId => ({
           id: descId,
-          hidden: !!initiallyHiddenById[descId],
+          _baseHidden: !!initiallyHiddenById[descId],
           _isExpanded: false,
           _revealedTypes: []
         }));
@@ -468,11 +515,12 @@
 
         const edgeUpdates = [];
         edges.forEach(e => {
-          const fromHidden = nodes.get(e.from)?.hidden;
-          const toHidden = nodes.get(e.to)?.hidden;
-          edgeUpdates.push({ id: e.id, hidden: !!(fromHidden || toHidden) });
+          const fromHidden = nodes.get(e.from)?._baseHidden;
+          const toHidden = nodes.get(e.to)?._baseHidden;
+          edgeUpdates.push({ id: e.id, _baseHidden: !!(fromHidden || toHidden) });
         });
         edges.update(edgeUpdates);
+        applyVisibility();
       }
     });
 
