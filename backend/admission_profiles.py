@@ -75,8 +75,11 @@ _PROGRAM_STOPWORDS = {
     "and", "of", "the", "in", "with", "for", "specialization", "specialisation",
     "programme", "program", "programs", "degree", "full", "time", "part", "timings", "timing",
     "integrated", "hons", "honours", "honors", "regular", "stream", "course",
-    "how", "apply", "application", "admission", "procedure", "process", "what",
-    "when", "at", "to", "do", "i", "for", "the", "is",
+    "how", "apply", "application", "admission", "admissions", "procedure", "process", "what",
+    "when", "at", "to", "do", "does", "did", "i", "for", "the", "is", "are", "was",
+    "work", "works", "working", "srm", "srmist", "srmktr", "university", "college",
+    "tell", "me", "about", "explain", "describe", "give", "get", "know", "want",
+    "can", "could", "would", "should", "will", "need", "please", "help",
 }
 
 _FIELD_KEYWORDS = {
@@ -1108,9 +1111,24 @@ def _looks_program_specific(question: str) -> bool:
     return any(token in question for token in ("b.tech", "btech", "m.tech", "mtech", "mba", "llm", "program"))
 
 
+_PROGRAM_DOMAIN_KEYWORDS = {
+    "cse", "ece", "eee", "mech", "civil", "it", "aiml", "ai", "ml", "ds",
+    "computer", "electronics", "electrical", "mechanical", "chemical", "biotechnology",
+    "biomedical", "aerospace", "automobile", "marine", "naval", "mining",
+    "management", "business", "finance", "marketing", "hr", "operations",
+    "law", "architecture", "design", "media", "journalism", "agriculture",
+    "pharmacy", "nursing", "medicine", "dental", "physiotherapy", "optometry",
+    "science", "mathematics", "physics", "chemistry", "biology", "statistics",
+    "english", "economics", "sociology", "psychology", "history",
+    "data", "cyber", "security", "networking", "cloud", "robotics", "iot",
+    "vlsi", "embedded", "signal", "power", "energy", "environmental",
+}
+
+
 def _has_specific_program_hint(question: str) -> bool:
-    tokens = _program_tokens(question) - _GENERIC_PROGRAM_TOKENS
-    return len(tokens) >= 2
+    tokens = _program_tokens(question)
+    domain_tokens = tokens - _GENERIC_PROGRAM_TOKENS
+    return bool(domain_tokens & _PROGRAM_DOMAIN_KEYWORDS)
 
 
 def _normalize_campus(value: str) -> str:
