@@ -1,0 +1,54 @@
+---
+alwaysApply: true
+---
+
+---
+description: Guidelines for when to activate the UI UX Pro Max skill
+alwaysApply: false
+---
+
+# UI UX Pro Max Skill — Activation Guidelines
+
+## When to Use This Skill
+
+Activate the UI UX Pro Max skill (located at `~/.cursor/skills/ui-ux-pro-max/`) when the user's request involves any of the following:
+
+### Always Activate
+- Building or designing a landing page, hero section, or marketing page
+- Creating a dashboard (analytics, BI, admin, sales, etc.)
+- Designing a mobile app UI (React Native, Flutter, SwiftUI, Jetpack Compose)
+- Generating a full-page UI component from scratch
+- Requests mentioning a visual style (e.g., glassmorphism, brutalism, dark mode, claymorphism)
+- Any request that names an industry + UI (e.g., "fintech app", "wellness platform", "SaaS homepage")
+
+### Activate When Context Suggests UI/UX Work
+- User says: build, design, create, implement, make, or generate + any UI noun
+- User mentions a tech stack alongside a product type (e.g., "Next.js SaaS dashboard")
+- User asks to "improve", "fix", or "review" an existing UI/UX
+- User specifies a color scheme, font, or design mood
+
+### Do NOT Activate
+- Pure backend or API work with no UI output
+- Writing tests, migrations, or scripts with no visual component
+- Debugging logic errors unrelated to UI
+- Documentation or README writing
+
+## How to Invoke the Skill
+
+1. Read `~/.cursor/skills/ui-ux-pro-max/SKILL.md` first for full instructions
+2. For design system generation, run:
+
+```
+   python3 ~/.cursor/skills/ui-ux-pro-max/scripts/search.py "<product type>" --design-system
+```
+
+   On Windows, use `python` instead of `python3` if `python3` is not on your PATH.
+
+3. Use the generated design system to guide all color, typography, spacing, and component decisions before writing code
+
+## Key Outputs the Skill Provides
+- Recommended UI style (from 67 styles)
+- Color palette matched to the industry
+- Typography pairing (Google Fonts)
+- Anti-patterns to avoid for that industry
+- Pre-delivery checklist (accessibility, responsiveness, hover states)

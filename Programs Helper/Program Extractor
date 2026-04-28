@@ -1,0 +1,84 @@
+// Re-fetch all data and download with split columns
+async function downloadCleanCSV() {
+    const ajaxUrl = ajax_display.ajax_url;
+    const nonce = ajax_display.nonce;
+    let allPrograms = [];
+    const totalPages = 69;
+
+    console.log('🚀 Re-fetching all programs...');
+
+    for (let page = 1; page <= totalPages; page++) {
+        const payload = new URLSearchParams({
+            action: 'jet_smart_filters',
+            security: nonce,
+            provider: 'epro-posts/default',
+            'defaults[post_type]': 'program_cpt',
+            'defaults[paged]': page,
+            'defaults[posts_per_page]': 6,
+            'defaults[tax_query]': '',
+            'defaults[category_name]': '',
+            'settings[posts_post_type]': 'program_cpt',
+            'settings[posts_orderby]': 'post_title',
+            'settings[posts_order]': 'asc',
+            'settings[posts_ignore_sticky_posts]': 'yes',
+            'settings[posts_query_id]': 'jet-smart-filters',
+            'settings[posts_offset]': 0,
+            'settings[_skin]': 'custom',
+            'settings[custom_skin_template]': '15155',
+            'settings[_el_widget_id]': '67550764',
+            'props[found_posts]': 410,
+            'props[max_num_pages]': 69,
+            'props[page]': page,
+        });
+
+        const resp = await fetch(ajaxUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: payload.toString()
+        });
+
+        const data = await resp.json();
+        const html = data.content || '';
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        doc.querySelectorAll('article.elementor-post').forEach(article => {
+            const titleEl = article.querySelector('.elementor-heading-title, h1, h2, h3, h4');
+            const title = titleEl?.textContent?.trim() || '';
+            const linkEl = article.querySelector('a[href*="/program/"]');
+            const url = linkEl?.getAttribute('href') || '';
+            const metaEl = article.querySelector('.elementor-shortcode, .elementor-element-375b450f');
+            const meta = metaEl?.textContent?.trim().replace(/\s+/g, ' ') || '';
+
+            const duration = meta.match(/Duration\s*:\s*([^|]+)/)?.[1]?.trim() || '';
+            const fees = meta.match(/Annual Fees\s*:\s*₹\s*([^|]+)/)?.[1]?.trim() || '';
+            const intake = meta.match(/Intake\s*:\s*([^|]+)/)?.[1]?.trim() || '';
+
+            if (title && url) {
+                allPrograms.push({ title, url, duration, fees, intake });
+            }
+        });
+
+        console.log(`✅ Page ${page}/${totalPages} — ${allPrograms.length} programs`);
+        await new Promise(r => setTimeout(r, 200));
+    }
+
+    console.log(`\n🎉 Done! Total: ${allPrograms.length} programs`);
+
+    // Download CSV with 5 clean columns
+    const csv = 'Title,URL,Duration,Annual Fees,Intake\n' + allPrograms.map(p =>
+        [p.title, p.url, p.duration, p.fees, p.intake]
+            .map(v => `"${(v || '').replace(/"/g, '""')}"`)
+            .join(',')
+    ).join('\n');
+
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'srm_programs_clean.csv';
+    a.click();
+
+    return allPrograms;
+}
+
+downloadCleanCSV();

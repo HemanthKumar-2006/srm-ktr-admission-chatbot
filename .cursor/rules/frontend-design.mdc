@@ -1,0 +1,65 @@
+---
+alwaysApply: true
+---
+
+---
+description: Guidelines for when to activate the Anthropic Frontend Design skill
+alwaysApply: false
+---
+
+# Frontend Design Skill — Activation Guidelines
+
+## When to Use This Skill
+
+Read `~/.cursor/skills/frontend-design/SKILL.md` before writing any frontend code when the request involves:
+
+### Always Activate
+- Building any web component, page, or full application from scratch
+- Creating React components, HTML/CSS layouts, Vue components
+- Any request to "style", "beautify", "redesign", or "polish" an existing UI
+- Landing pages, portfolios, dashboards, posters, marketing pages
+- Requests where the visual output will be seen by end users
+
+### Activate When Context Suggests UI Work
+- User mentions a design aesthetic (minimal, dark mode, glassmorphism, brutalist, retro, etc.)
+- User specifies a color scheme, font preference, or mood/tone
+- User shows a screenshot or reference and asks to replicate or improve it
+- User asks for a component that has visible output (cards, modals, navbars, forms, heroes, etc.)
+
+### Do NOT Activate
+- Pure backend/API code with no visual component
+- CLI tools, scripts, or data processing
+- Writing tests or configuration files
+- Documentation with no UI output
+
+## Core Principles to Apply (from the Skill)
+
+**Before writing code:**
+- Commit to a BOLD, specific aesthetic direction — do not default to generic
+- Identify the tone: brutally minimal, maximalist, retro-futuristic, luxury, playful, editorial, etc.
+- Ask: what is the ONE thing someone will remember about this interface?
+
+**Typography:**
+- Never use Inter, Roboto, Arial, or system fonts
+- Choose distinctive display + refined body font pairings from Google Fonts
+
+**Color:**
+- Use CSS variables for consistency
+- Commit to a dominant palette with sharp accents — avoid timid, evenly-distributed colors
+- Never use purple gradients on white as a default
+
+**Motion & Effects:**
+- Prefer CSS-only animations for HTML output
+- One well-orchestrated page load with staggered reveals beats scattered micro-interactions
+- Add atmosphere: gradient meshes, noise textures, geometric patterns, grain overlays
+
+**Layout:**
+- Break the grid intentionally: asymmetry, overlaps, diagonal flow, generous negative space
+
+## Relationship to UI UX Pro Max Skill
+
+Use **both skills together** when building full product UIs:
+1. **UI UX Pro Max** → generates the design system (style, color palette, typography, industry rules)
+2. **Frontend Design** → executes the implementation with production-grade aesthetics and code quality
+
+Use **Frontend Design alone** for one-off components or when no industry-specific design system is needed.
